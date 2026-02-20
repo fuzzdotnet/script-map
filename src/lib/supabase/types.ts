@@ -42,6 +42,7 @@ export interface Highlight {
   end_offset: number;
   label: string | null;
   color: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
 }

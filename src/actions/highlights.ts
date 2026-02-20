@@ -41,6 +41,17 @@ export async function deleteHighlight(highlightId: string) {
   if (error) throw new Error(`Failed to delete highlight: ${error.message}`);
 }
 
+export async function updateHighlightNote(highlightId: string, note: string | null) {
+  const supabase = createServerClient();
+
+  const { error } = await supabase
+    .from("highlights")
+    .update({ note })
+    .eq("id", highlightId);
+
+  if (error) throw new Error(`Failed to update highlight note: ${error.message}`);
+}
+
 export async function getHighlightsForProject(projectId: string): Promise<Highlight[]> {
   const supabase = createServerClient();
 

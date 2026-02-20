@@ -56,7 +56,7 @@ export function CoverageLegend({ projectId, coverageColors }: CoverageLegendProp
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 flex items-center gap-3 rounded-full border border-border/50 bg-surface/80 backdrop-blur-sm px-3.5 py-1.5 text-[0.65rem] text-muted-foreground/70">
+    <div className="fixed bottom-4 left-4 z-40 flex items-center gap-3 rounded-full border border-white/15 bg-surface/90 backdrop-blur-sm px-4 py-2 text-xs text-muted-foreground shadow-lg">
       {Object.values(COVERAGE_TYPES).map((ct) => {
         const Icon = icons[ct.type];
         return (
@@ -64,10 +64,10 @@ export function CoverageLegend({ projectId, coverageColors }: CoverageLegendProp
             <PopoverTrigger asChild>
               <button className="flex items-center gap-1.5 hover:text-foreground transition-colors">
                 <span
-                  className="h-2.5 w-2.5 rounded-full ring-1 ring-white/10"
+                  className="h-3 w-3 rounded-full ring-1 ring-white/15"
                   style={{ backgroundColor: getColor(ct.type) }}
                 />
-                <Icon className="h-2.5 w-2.5" />
+                <Icon className="h-3 w-3" />
                 <span>{ct.label}</span>
               </button>
             </PopoverTrigger>

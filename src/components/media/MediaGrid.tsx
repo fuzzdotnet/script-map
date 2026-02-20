@@ -125,7 +125,7 @@ function UploadedMediaCard({ file }: { file: MediaFile }) {
     <div className={`group rounded-lg border border-border bg-card overflow-hidden ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
       {(isImage || isVideo) && (
         <div
-          className="relative bg-elevated flex items-center justify-center overflow-hidden"
+          className="relative w-full bg-elevated flex items-center justify-center overflow-hidden"
           style={{ minHeight: "120px", maxHeight: "240px" }}
         >
           {thumbnailUrl && isImage && (
@@ -133,13 +133,13 @@ function UploadedMediaCard({ file }: { file: MediaFile }) {
             <img
               src={thumbnailUrl}
               alt={file.filename}
-              className="max-w-full max-h-[240px] object-contain"
+              className="w-full h-auto max-h-[240px] object-contain"
             />
           )}
           {thumbnailUrl && isVideo && (
             <video
               src={`${thumbnailUrl}#t=1`}
-              className="max-w-full max-h-[240px] object-contain"
+              className="w-full h-auto max-h-[240px] object-contain"
               muted
               playsInline
               preload="metadata"

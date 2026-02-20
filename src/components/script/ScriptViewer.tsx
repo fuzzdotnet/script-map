@@ -16,11 +16,13 @@ import type {
   SectionMedia,
   MediaFile,
   FileReference,
+  ProjectSettings,
 } from "@/lib/supabase/types";
 
 interface ScriptViewerProps {
   sections: Section[];
   projectId: string;
+  settings?: ProjectSettings;
   initialHighlights?: Highlight[];
   initialHighlightMedia?: HighlightMedia[];
   initialSectionMedia?: SectionMedia[];
@@ -31,6 +33,7 @@ interface ScriptViewerProps {
 export function ScriptViewer({
   sections,
   projectId,
+  settings,
   initialHighlights = [],
   initialHighlightMedia = [],
   initialSectionMedia = [],
@@ -59,6 +62,22 @@ export function ScriptViewer({
     setFileReferences(initialFileReferences);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Apply saved coverage colors as CSS variable overrides
+  useEffect(() => {
+    const cc = settings?.coverageColors;
+    if (!cc) return;
+    if (cc.media) document.documentElement.style.setProperty("--highlight-blue", cc.media);
+    if (cc.graphics) document.documentElement.style.setProperty("--highlight-green", cc.graphics);
+    if (cc.on_camera) document.documentElement.style.setProperty("--highlight-amber", cc.on_camera);
+
+    return () => {
+      // Reset on unmount so other pages aren't affected
+      document.documentElement.style.removeProperty("--highlight-blue");
+      document.documentElement.style.removeProperty("--highlight-green");
+      document.documentElement.style.removeProperty("--highlight-amber");
+    };
+  }, [settings]);
 
   function handleMedia() {
     if (!selection) return;
@@ -129,10 +148,6 @@ export function ScriptViewer({
       {/* Script panel */}
       <ScrollArea className="flex-1">
         <div className="mx-auto max-w-3xl px-8 py-12">
-          {/* Coverage type legend */}
-          <div className="mb-8 flex justify-center">
-            <CoverageLegend />
-          </div>
           {sections.length === 0 ? (
             <div className="py-24 text-center text-muted-foreground">
               <p className="text-lg">No sections found.</p>
@@ -161,6 +176,9 @@ export function ScriptViewer({
 
       {/* Media sidebar */}
       <MediaSidebar projectId={projectId} />
+
+      {/* Coverage type legend */}
+      <CoverageLegend projectId={projectId} coverageColors={settings?.coverageColors} />
     </div>
   );
 }

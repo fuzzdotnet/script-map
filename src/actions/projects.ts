@@ -161,3 +161,24 @@ export async function updateProjectTitle(projectId: string, title: string) {
 
   if (error) throw new Error(`Failed to update project: ${error.message}`);
 }
+
+export async function updateProjectSettings(projectId: string, settings: Record<string, unknown>) {
+  const supabase = createServerClient();
+
+  // Merge with existing settings
+  const { data: project } = await supabase
+    .from("projects")
+    .select("settings")
+    .eq("id", projectId)
+    .single();
+
+  const merged = { ...(project?.settings || {}), ...settings };
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ settings: merged })
+    .eq("id", projectId);
+
+  if (error) throw new Error(`Failed to update settings: ${error.message}`);
+  return merged;
+}

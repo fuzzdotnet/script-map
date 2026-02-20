@@ -38,6 +38,7 @@ export default async function ProjectPage({
         <ScriptViewer
           sections={sections}
           projectId={project.id}
+          settings={project.settings}
           initialHighlights={highlights}
           initialHighlightMedia={highlightMedia}
           initialSectionMedia={sectionMedia}

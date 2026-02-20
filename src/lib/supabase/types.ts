@@ -1,7 +1,16 @@
+export interface ProjectSettings {
+  coverageColors?: {
+    media?: string;
+    graphics?: string;
+    on_camera?: string;
+  };
+}
+
 export interface Project {
   id: string;
   title: string;
   share_token: string;
+  settings?: ProjectSettings;
   created_at: string;
   updated_at: string;
 }

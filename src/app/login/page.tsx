@@ -36,11 +36,15 @@ function LoginForm() {
     }
 
     startTransition(async () => {
+      // Store the intended redirect so the callback can read it after the magic link click
+      document.cookie = `auth_redirect_to=${encodeURIComponent(redirectTo)}; path=/; max-age=600; SameSite=Lax`;
+
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          // Keep this URL clean (no query params) so it matches the Supabase redirect allowlist exactly
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 

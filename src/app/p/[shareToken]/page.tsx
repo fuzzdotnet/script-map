@@ -7,6 +7,7 @@ import {
   getHighlightMediaForProject,
   getSectionMediaForProject,
 } from "@/actions/media";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { ScriptViewer } from "@/components/script/ScriptViewer";
 import { TopBar } from "@/components/layout/TopBar";
 
@@ -16,9 +17,14 @@ export default async function ProjectPage({
   params: Promise<{ shareToken: string }>;
 }) {
   const { shareToken } = await params;
-  const project = await getProjectByToken(shareToken);
+  const [project, user] = await Promise.all([
+    getProjectByToken(shareToken),
+    getAuthUser(),
+  ]);
 
   if (!project) notFound();
+
+  const canEdit = !!user && !!project.owner_id && user.id === project.owner_id;
 
   // Fetch all data in parallel
   const [sections, highlights, mediaFiles, fileReferences, highlightMedia, sectionMedia] =
@@ -33,7 +39,7 @@ export default async function ProjectPage({
 
   return (
     <div className="flex h-screen flex-col">
-      <TopBar project={project} />
+      <TopBar project={project} canEdit={canEdit} />
       <main className="flex flex-1 overflow-hidden">
         <ScriptViewer
           sections={sections}
@@ -44,6 +50,7 @@ export default async function ProjectPage({
           initialSectionMedia={sectionMedia}
           initialMediaFiles={mediaFiles}
           initialFileReferences={fileReferences}
+          canEdit={canEdit}
         />
       </main>
     </div>

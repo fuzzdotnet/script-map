@@ -2,17 +2,20 @@
 
 import { nanoid } from "nanoid";
 import { createServerClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
+import { requireProjectOwner } from "@/lib/auth-helpers";
 import { parseScriptText } from "@/lib/sectionParser";
 import type { Project } from "@/lib/supabase/types";
 
 export async function createProject(title: string, scriptText: string) {
+  const user = await requireAuth();
   const supabase = createServerClient();
   const shareToken = nanoid(12);
 
   // Create the project
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .insert({ title, share_token: shareToken })
+    .insert({ title, share_token: shareToken, owner_id: user.id })
     .select()
     .single();
 
@@ -67,11 +70,13 @@ export async function getProjectSections(projectId: string) {
 }
 
 export async function listProjects(): Promise<Project[]> {
+  const user = await requireAuth();
   const supabase = createServerClient();
 
   const { data, error } = await supabase
     .from("projects")
     .select()
+    .eq("owner_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(20);
 
@@ -80,6 +85,7 @@ export async function listProjects(): Promise<Project[]> {
 }
 
 export async function deleteProject(projectId: string) {
+  await requireProjectOwner(projectId);
   const supabase = createServerClient();
 
   const { error } = await supabase
@@ -115,6 +121,7 @@ export async function getProjectHighlightCount(projectId: string): Promise<numbe
 }
 
 export async function replaceProjectScript(projectId: string, scriptText: string) {
+  await requireProjectOwner(projectId);
   const supabase = createServerClient();
 
   // Delete existing sections (cascades to highlights, highlight_media, section_media)
@@ -152,6 +159,7 @@ export async function replaceProjectScript(projectId: string, scriptText: string
 }
 
 export async function updateProjectTitle(projectId: string, title: string) {
+  await requireProjectOwner(projectId);
   const supabase = createServerClient();
 
   const { error } = await supabase
@@ -163,6 +171,7 @@ export async function updateProjectTitle(projectId: string, title: string) {
 }
 
 export async function updateProjectSettings(projectId: string, settings: Record<string, unknown>) {
+  await requireProjectOwner(projectId);
   const supabase = createServerClient();
 
   // Merge with existing settings

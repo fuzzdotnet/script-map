@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Copy, Check, Download } from "lucide-react";
+import { ArrowLeft, Copy, Check, Download, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { DownloadAllMediaDialog } from "@/components/media/DownloadAllMediaDialog";
 import type { Project } from "@/lib/supabase/types";
 
-export function TopBar({ project }: { project: Project }) {
+export function TopBar({ project, canEdit }: { project: Project; canEdit?: boolean }) {
   const [copied, setCopied] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
 
@@ -26,7 +26,7 @@ export function TopBar({ project }: { project: Project }) {
     <header className="flex items-center justify-between border-b border-border px-6 py-3 bg-surface">
       <div className="flex items-center gap-4">
         <Link
-          href="/"
+          href={canEdit ? "/dashboard" : "/"}
           className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -47,6 +47,15 @@ export function TopBar({ project }: { project: Project }) {
             <Download className="h-4 w-4" />
             Download Media
           </Button>
+        )}
+
+        {canEdit && (
+          <Link href={`/p/${project.share_token}/edit`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Pencil className="h-4 w-4" />
+              Edit Script
+            </Button>
+          </Link>
         )}
 
         <Button

@@ -28,6 +28,7 @@ interface ScriptViewerProps {
   initialSectionMedia?: SectionMedia[];
   initialMediaFiles?: MediaFile[];
   initialFileReferences?: FileReference[];
+  canEdit?: boolean;
 }
 
 export function ScriptViewer({
@@ -39,6 +40,7 @@ export function ScriptViewer({
   initialSectionMedia = [],
   initialMediaFiles = [],
   initialFileReferences = [],
+  canEdit = false,
 }: ScriptViewerProps) {
   const { selection, clearSelection } = useTextSelection();
   const [isPending, startTransition] = useTransition();
@@ -163,8 +165,8 @@ export function ScriptViewer({
         </div>
       </ScrollArea>
 
-      {/* Floating toolbar on text selection */}
-      {selection && !isPending && (
+      {/* Floating toolbar on text selection (editors only) */}
+      {canEdit && selection && !isPending && (
         <FloatingToolbar
           selection={selection}
           onMedia={handleMedia}
@@ -174,11 +176,11 @@ export function ScriptViewer({
         />
       )}
 
-      {/* Media sidebar */}
-      <MediaSidebar projectId={projectId} />
+      {/* Media sidebar (editors only) */}
+      {canEdit && <MediaSidebar projectId={projectId} />}
 
-      {/* Coverage type legend */}
-      <CoverageLegend projectId={projectId} coverageColors={settings?.coverageColors} />
+      {/* Coverage type legend (editors only) */}
+      {canEdit && <CoverageLegend projectId={projectId} coverageColors={settings?.coverageColors} />}
     </div>
   );
 }

@@ -1,40 +1,33 @@
 import Link from "next/link";
 import { FileText, Upload, Share2, Layers, Plus } from "lucide-react";
-import { ProjectList } from "@/components/ProjectList";
-import {
-  listProjects,
-  getProjectSectionCount,
-  getProjectHighlightCount,
-} from "@/actions/projects";
+import { getAuthUser } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let projectsWithStats: {
-    id: string;
-    title: string;
-    share_token: string;
-    created_at: string;
-    updated_at: string;
-    sectionCount: number;
-    highlightCount: number;
-  }[] = [];
-
-  try {
-    const projects = await listProjects();
-    projectsWithStats = await Promise.all(
-      projects.map(async (p) => ({
-        ...p,
-        sectionCount: await getProjectSectionCount(p.id),
-        highlightCount: await getProjectHighlightCount(p.id),
-      }))
-    );
-  } catch {
-    // Supabase may not be configured yet
-  }
+  const user = await getAuthUser();
 
   return (
     <div className="flex min-h-screen flex-col items-center px-6">
+      {/* Nav */}
+      <nav className="w-full max-w-2xl flex items-center justify-end pt-6">
+        {user ? (
+          <Link
+            href="/dashboard"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sign in
+          </Link>
+        )}
+      </nav>
+
       {/* Hero */}
       <section className="relative w-full max-w-2xl text-center pt-40 pb-28">
         {/* Ambient glow */}
@@ -49,7 +42,7 @@ export default async function Home() {
 
         <div className="relative mt-12">
           <Link
-            href="/new"
+            href={user ? "/new" : "/login?redirectTo=/new"}
             className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-all hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
@@ -78,22 +71,9 @@ export default async function Home() {
         <Feature
           icon={<Share2 className="h-4 w-4" />}
           title="Share Instantly"
-          description="Get a shareable link. No login required for your editors."
+          description="Get a shareable link. No login required for viewers."
         />
       </section>
-
-      {/* Projects */}
-      {projectsWithStats.length > 0 && (
-        <section className="w-full max-w-2xl pb-24">
-          <div className="flex items-center gap-4 mb-6">
-            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground/60 whitespace-nowrap">
-              Recent Projects
-            </h2>
-            <div className="flex-1 h-px bg-border/40" />
-          </div>
-          <ProjectList projects={projectsWithStats} />
-        </section>
-      )}
 
       {/* Footer */}
       <footer className="mt-auto py-12 text-center text-xs text-muted-foreground/25">

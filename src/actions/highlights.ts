@@ -1,7 +1,30 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { requireProjectOwner } from "@/lib/auth-helpers";
 import type { Highlight } from "@/lib/supabase/types";
+
+async function getProjectIdForSection(sectionId: string): Promise<string> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("sections")
+    .select("project_id")
+    .eq("id", sectionId)
+    .single();
+  if (!data) throw new Error("Section not found");
+  return data.project_id;
+}
+
+async function getProjectIdForHighlight(highlightId: string): Promise<string> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("highlights")
+    .select("section_id")
+    .eq("id", highlightId)
+    .single();
+  if (!data) throw new Error("Highlight not found");
+  return getProjectIdForSection(data.section_id);
+}
 
 export async function createHighlight(params: {
   sectionId: string;
@@ -11,6 +34,9 @@ export async function createHighlight(params: {
   color?: string;
   collaboratorId?: string;
 }): Promise<Highlight> {
+  const projectId = await getProjectIdForSection(params.sectionId);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
 
   const { data, error } = await supabase
@@ -31,6 +57,9 @@ export async function createHighlight(params: {
 }
 
 export async function deleteHighlight(highlightId: string) {
+  const projectId = await getProjectIdForHighlight(highlightId);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
 
   const { error } = await supabase
@@ -42,6 +71,9 @@ export async function deleteHighlight(highlightId: string) {
 }
 
 export async function updateHighlightNote(highlightId: string, note: string | null) {
+  const projectId = await getProjectIdForHighlight(highlightId);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
 
   const { error } = await supabase

@@ -1,12 +1,61 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { requireProjectOwner } from "@/lib/auth-helpers";
 import type {
   MediaFile,
   FileReference,
   HighlightMedia,
   SectionMedia,
 } from "@/lib/supabase/types";
+
+// ============================================
+// LOOKUP HELPERS (for auth checks)
+// ============================================
+
+async function getProjectIdForSection(sectionId: string): Promise<string> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("sections")
+    .select("project_id")
+    .eq("id", sectionId)
+    .single();
+  if (!data) throw new Error("Section not found");
+  return data.project_id;
+}
+
+async function getProjectIdForHighlight(highlightId: string): Promise<string> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("highlights")
+    .select("section_id")
+    .eq("id", highlightId)
+    .single();
+  if (!data) throw new Error("Highlight not found");
+  return getProjectIdForSection(data.section_id);
+}
+
+async function getProjectIdForHighlightMedia(hmId: string): Promise<string> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("highlight_media")
+    .select("highlight_id")
+    .eq("id", hmId)
+    .single();
+  if (!data) throw new Error("Highlight media not found");
+  return getProjectIdForHighlight(data.highlight_id);
+}
+
+async function getProjectIdForSectionMedia(smId: string): Promise<string> {
+  const supabase = createServerClient();
+  const { data } = await supabase
+    .from("section_media")
+    .select("section_id")
+    .eq("id", smId)
+    .single();
+  if (!data) throw new Error("Section media not found");
+  return getProjectIdForSection(data.section_id);
+}
 
 // ============================================
 // MEDIA FILE UPLOADS
@@ -20,6 +69,7 @@ export async function createMediaFileRecord(params: {
   sizeBytes: number;
   collaboratorId?: string;
 }): Promise<MediaFile> {
+  await requireProjectOwner(params.projectId);
   const supabase = createServerClient();
 
   const { data, error } = await supabase
@@ -109,6 +159,7 @@ export async function createFileReference(params: {
   fileType?: string;
   collaboratorId?: string;
 }): Promise<FileReference> {
+  await requireProjectOwner(params.projectId);
   const supabase = createServerClient();
 
   const { data, error } = await supabase
@@ -150,6 +201,9 @@ export async function attachMediaToHighlight(params: {
   fileReferenceId?: string;
   note?: string;
 }): Promise<HighlightMedia> {
+  const projectId = await getProjectIdForHighlight(params.highlightId);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
 
   // Get current max sort order
@@ -207,6 +261,9 @@ export async function attachMediaToSection(params: {
   note?: string;
   collaboratorId?: string;
 }): Promise<SectionMedia> {
+  const projectId = await getProjectIdForSection(params.sectionId);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
 
   const { data: existing } = await supabase
@@ -255,6 +312,9 @@ export async function getSectionMediaForProject(projectId: string): Promise<Sect
 // ============================================
 
 export async function removeHighlightMedia(id: string) {
+  const projectId = await getProjectIdForHighlightMedia(id);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
   const { error } = await supabase
     .from("highlight_media")
@@ -264,6 +324,9 @@ export async function removeHighlightMedia(id: string) {
 }
 
 export async function removeSectionMedia(id: string) {
+  const projectId = await getProjectIdForSectionMedia(id);
+  await requireProjectOwner(projectId);
+
   const supabase = createServerClient();
   const { error } = await supabase
     .from("section_media")
@@ -274,6 +337,15 @@ export async function removeSectionMedia(id: string) {
 
 export async function deleteMediaFile(id: string, storagePath: string) {
   const supabase = createServerClient();
+
+  // Look up the project for this media file
+  const { data: mf } = await supabase
+    .from("media_files")
+    .select("project_id")
+    .eq("id", id)
+    .single();
+  if (!mf) throw new Error("Media file not found");
+  await requireProjectOwner(mf.project_id);
 
   // Delete from storage
   await supabase.storage.from("script-map-media").remove([storagePath]);
@@ -288,6 +360,16 @@ export async function deleteMediaFile(id: string, storagePath: string) {
 
 export async function deleteFileReference(id: string) {
   const supabase = createServerClient();
+
+  // Look up the project for this file reference
+  const { data: fr } = await supabase
+    .from("file_references")
+    .select("project_id")
+    .eq("id", id)
+    .single();
+  if (!fr) throw new Error("File reference not found");
+  await requireProjectOwner(fr.project_id);
+
   // Cascades to highlight_media / section_media
   const { error } = await supabase
     .from("file_references")
@@ -304,12 +386,14 @@ export async function uploadMediaFile(formData: FormData): Promise<{
   mediaFile: MediaFile;
   signedUrl: string;
 }> {
-  const supabase = createServerClient();
-
   const file = formData.get("file") as File;
   const projectId = formData.get("projectId") as string;
 
   if (!file || !projectId) throw new Error("Missing file or projectId");
+
+  await requireProjectOwner(projectId);
+
+  const supabase = createServerClient();
 
   // Convert File to Buffer for reliable server-side upload
   const arrayBuffer = await file.arrayBuffer();
@@ -331,17 +415,25 @@ export async function uploadMediaFile(formData: FormData): Promise<{
     throw new Error(`Upload failed: ${uploadError.message}`);
   }
 
-  // Create the database record
-  const mediaFile = await createMediaFileRecord({
-    projectId,
-    storagePath,
-    filename: file.name,
-    mimeType: file.type,
-    sizeBytes: file.size,
-  });
+  // Create the database record (auth already checked above, call internal helper)
+  const { data, error } = await supabase
+    .from("media_files")
+    .insert({
+      project_id: projectId,
+      storage_path: storagePath,
+      filename: file.name,
+      mime_type: file.type,
+      size_bytes: file.size,
+      uploaded_by: null,
+      upload_status: "complete",
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create media record: ${error.message}`);
 
   // Get a signed URL for immediate use
   const signedUrl = await getSignedUrl(storagePath);
 
-  return { mediaFile, signedUrl };
+  return { mediaFile: data, signedUrl };
 }

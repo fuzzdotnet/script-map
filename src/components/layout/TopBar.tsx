@@ -1,16 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Copy, Check, Download, Pencil } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Download,
+  Pencil,
+  UserPlus,
+  BookmarkPlus,
+} from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { DownloadAllMediaDialog } from "@/components/media/DownloadAllMediaDialog";
+import { InviteDialog } from "@/components/InviteDialog";
+import { joinProject } from "@/actions/members";
 import type { Project } from "@/lib/supabase/types";
+import type { ProjectRole } from "@/actions/projects";
 
-export function TopBar({ project, canEdit }: { project: Project; canEdit?: boolean }) {
+interface TopBarProps {
+  project: Project;
+  canEdit?: boolean;
+  role?: ProjectRole | "none";
+  isMember?: boolean;
+  isLoggedIn?: boolean;
+}
+
+export function TopBar({
+  project,
+  canEdit,
+  role = "none",
+  isMember = false,
+  isLoggedIn = false,
+}: TopBarProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [joining, startJoinTransition] = useTransition();
+  const [joined, setJoined] = useState(false);
 
   const mediaFiles = useAnnotationStore((s) => s.mediaFiles);
   const fileReferences = useAnnotationStore((s) => s.fileReferences);
@@ -22,11 +52,25 @@ export function TopBar({ project, canEdit }: { project: Project; canEdit?: boole
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleJoin() {
+    startJoinTransition(async () => {
+      try {
+        await joinProject(project.id);
+        setJoined(true);
+        router.refresh();
+      } catch (err) {
+        console.error("Failed to join:", err);
+      }
+    });
+  }
+
+  const backHref = isMember || role === "owner" ? "/dashboard" : "/";
+
   return (
     <header className="flex items-center justify-between border-b border-border px-6 py-3 bg-surface">
       <div className="flex items-center gap-4">
         <Link
-          href={canEdit ? "/dashboard" : "/"}
+          href={backHref}
           className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -58,6 +102,31 @@ export function TopBar({ project, canEdit }: { project: Project; canEdit?: boole
           </Link>
         )}
 
+        {role === "owner" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInviteOpen(true)}
+            className="gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Invite
+          </Button>
+        )}
+
+        {isLoggedIn && !isMember && role === "none" && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleJoin}
+            disabled={joining || joined}
+            className="gap-2"
+          >
+            <BookmarkPlus className="h-4 w-4" />
+            {joined ? "Saved" : joining ? "Saving..." : "Save to Dashboard"}
+          </Button>
+        )}
+
         <Button
           variant="outline"
           size="sm"
@@ -86,6 +155,14 @@ export function TopBar({ project, canEdit }: { project: Project; canEdit?: boole
         mediaFiles={mediaFiles}
         fileReferences={fileReferences}
       />
+
+      {role === "owner" && (
+        <InviteDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          projectId={project.id}
+        />
+      )}
     </header>
   );
 }

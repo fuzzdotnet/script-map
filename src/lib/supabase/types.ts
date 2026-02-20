@@ -97,6 +97,15 @@ export interface SectionMedia {
   created_at: string;
 }
 
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string | null;
+  invited_email: string;
+  role: "viewer" | "editor";
+  created_at: string;
+}
+
 export interface Note {
   id: string;
   project_id: string;

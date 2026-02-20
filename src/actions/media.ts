@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
-import { requireProjectOwner } from "@/lib/auth-helpers";
+import { requireProjectEditor } from "@/lib/auth-helpers";
 import type {
   MediaFile,
   FileReference,
@@ -69,7 +69,7 @@ export async function createMediaFileRecord(params: {
   sizeBytes: number;
   collaboratorId?: string;
 }): Promise<MediaFile> {
-  await requireProjectOwner(params.projectId);
+  await requireProjectEditor(params.projectId);
   const supabase = createServerClient();
 
   const { data, error } = await supabase
@@ -159,7 +159,7 @@ export async function createFileReference(params: {
   fileType?: string;
   collaboratorId?: string;
 }): Promise<FileReference> {
-  await requireProjectOwner(params.projectId);
+  await requireProjectEditor(params.projectId);
   const supabase = createServerClient();
 
   const { data, error } = await supabase
@@ -202,7 +202,7 @@ export async function attachMediaToHighlight(params: {
   note?: string;
 }): Promise<HighlightMedia> {
   const projectId = await getProjectIdForHighlight(params.highlightId);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 
@@ -262,7 +262,7 @@ export async function attachMediaToSection(params: {
   collaboratorId?: string;
 }): Promise<SectionMedia> {
   const projectId = await getProjectIdForSection(params.sectionId);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 
@@ -313,7 +313,7 @@ export async function getSectionMediaForProject(projectId: string): Promise<Sect
 
 export async function removeHighlightMedia(id: string) {
   const projectId = await getProjectIdForHighlightMedia(id);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
   const { error } = await supabase
@@ -325,7 +325,7 @@ export async function removeHighlightMedia(id: string) {
 
 export async function removeSectionMedia(id: string) {
   const projectId = await getProjectIdForSectionMedia(id);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
   const { error } = await supabase
@@ -345,7 +345,7 @@ export async function deleteMediaFile(id: string, storagePath: string) {
     .eq("id", id)
     .single();
   if (!mf) throw new Error("Media file not found");
-  await requireProjectOwner(mf.project_id);
+  await requireProjectEditor(mf.project_id);
 
   // Delete from storage
   await supabase.storage.from("script-map-media").remove([storagePath]);
@@ -368,7 +368,7 @@ export async function deleteFileReference(id: string) {
     .eq("id", id)
     .single();
   if (!fr) throw new Error("File reference not found");
-  await requireProjectOwner(fr.project_id);
+  await requireProjectEditor(fr.project_id);
 
   // Cascades to highlight_media / section_media
   const { error } = await supabase
@@ -391,7 +391,7 @@ export async function uploadMediaFile(formData: FormData): Promise<{
 
   if (!file || !projectId) throw new Error("Missing file or projectId");
 
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 

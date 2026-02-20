@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
-import { requireProjectOwner } from "@/lib/auth-helpers";
+import { requireProjectEditor } from "@/lib/auth-helpers";
 import type { Highlight } from "@/lib/supabase/types";
 
 async function getProjectIdForSection(sectionId: string): Promise<string> {
@@ -35,7 +35,7 @@ export async function createHighlight(params: {
   collaboratorId?: string;
 }): Promise<Highlight> {
   const projectId = await getProjectIdForSection(params.sectionId);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 
@@ -58,7 +58,7 @@ export async function createHighlight(params: {
 
 export async function deleteHighlight(highlightId: string) {
   const projectId = await getProjectIdForHighlight(highlightId);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 
@@ -72,7 +72,7 @@ export async function deleteHighlight(highlightId: string) {
 
 export async function updateHighlightNote(highlightId: string, note: string | null) {
   const projectId = await getProjectIdForHighlight(highlightId);
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 

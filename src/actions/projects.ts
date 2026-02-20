@@ -3,9 +3,15 @@
 import { nanoid } from "nanoid";
 import { createServerClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
-import { requireProjectOwner } from "@/lib/auth-helpers";
+import { requireProjectOwner, requireProjectEditor } from "@/lib/auth-helpers";
 import { parseScriptText } from "@/lib/sectionParser";
 import type { Project } from "@/lib/supabase/types";
+
+export type ProjectRole = "owner" | "editor" | "viewer";
+
+export interface ProjectWithRole extends Project {
+  role: ProjectRole;
+}
 
 export async function createProject(title: string, scriptText: string) {
   const user = await requireAuth();
@@ -69,19 +75,59 @@ export async function getProjectSections(projectId: string) {
   return data;
 }
 
-export async function listProjects(): Promise<Project[]> {
+export async function listProjects(): Promise<ProjectWithRole[]> {
   const user = await requireAuth();
   const supabase = createServerClient();
+  const email = user.email?.toLowerCase();
 
-  const { data, error } = await supabase
+  // 1. Owned projects
+  const { data: owned, error: ownedError } = await supabase
     .from("projects")
     .select()
     .eq("owner_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(20);
 
-  if (error) throw new Error(`Failed to list projects: ${error.message}`);
-  return data;
+  if (ownedError) throw new Error(`Failed to list projects: ${ownedError.message}`);
+
+  const ownedWithRole: ProjectWithRole[] = (owned || []).map((p) => ({
+    ...p,
+    role: "owner" as const,
+  }));
+
+  // 2. Shared projects (via project_members)
+  const { data: memberships } = await supabase
+    .from("project_members")
+    .select("project_id, role")
+    .or(`user_id.eq.${user.id}${email ? `,invited_email.eq.${email}` : ""}`);
+
+  if (!memberships || memberships.length === 0) return ownedWithRole;
+
+  // Filter out any we already own
+  const ownedIds = new Set(ownedWithRole.map((p) => p.id));
+  const sharedMemberships = memberships.filter((m) => !ownedIds.has(m.project_id));
+
+  if (sharedMemberships.length === 0) return ownedWithRole;
+
+  const sharedIds = sharedMemberships.map((m) => m.project_id);
+  const { data: sharedProjects } = await supabase
+    .from("projects")
+    .select()
+    .in("id", sharedIds)
+    .order("updated_at", { ascending: false });
+
+  if (!sharedProjects) return ownedWithRole;
+
+  const roleMap = new Map(sharedMemberships.map((m) => [m.project_id, m.role]));
+  const sharedWithRole: ProjectWithRole[] = sharedProjects.map((p) => ({
+    ...p,
+    role: (roleMap.get(p.id) || "viewer") as ProjectRole,
+  }));
+
+  // Merge and sort by updated_at
+  return [...ownedWithRole, ...sharedWithRole].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  );
 }
 
 export async function deleteProject(projectId: string) {
@@ -121,7 +167,7 @@ export async function getProjectHighlightCount(projectId: string): Promise<numbe
 }
 
 export async function replaceProjectScript(projectId: string, scriptText: string) {
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
   const supabase = createServerClient();
 
   // Delete existing sections (cascades to highlights, highlight_media, section_media)
@@ -159,7 +205,7 @@ export async function replaceProjectScript(projectId: string, scriptText: string
 }
 
 export async function updateProjectTitle(projectId: string, title: string) {
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
   const supabase = createServerClient();
 
   const { error } = await supabase

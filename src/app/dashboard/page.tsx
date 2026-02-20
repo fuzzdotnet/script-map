@@ -8,13 +8,24 @@ import {
   getProjectSectionCount,
   getProjectHighlightCount,
 } from "@/actions/projects";
+import { claimPendingInvites } from "@/actions/members";
 import { getAuthUser } from "@/lib/supabase/auth";
+import type { ProjectRole } from "@/actions/projects";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await getAuthUser();
   if (!user) redirect("/login");
+
+  // Claim any pending invites for this user
+  if (user.email) {
+    try {
+      await claimPendingInvites(user.id, user.email);
+    } catch {
+      // non-critical
+    }
+  }
 
   let projectsWithStats: {
     id: string;
@@ -23,6 +34,7 @@ export default async function DashboardPage() {
     owner_id: string | null;
     created_at: string;
     updated_at: string;
+    role: ProjectRole;
     sectionCount: number;
     highlightCount: number;
   }[] = [];

@@ -130,17 +130,22 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const state = get();
     const hId = state.selectedHighlightId;
 
-    // If a highlight is selected but has no media attached, it's orphaned — remove it
+    // If a media highlight is selected but has no media attached, it's orphaned — remove it
+    // Graphics and on_camera highlights are valid without media
     if (hId) {
-      const hasMedia = state.highlightMedia.some((hm) => hm.highlight_id === hId);
-      if (!hasMedia) {
-        set((s) => ({
-          sidebarOpen: false,
-          selectedHighlightId: null,
-          selectedSectionId: null,
-          highlights: s.highlights.filter((h) => h.id !== hId),
-        }));
-        return;
+      const highlight = state.highlights.find((h) => h.id === hId);
+      const isMediaType = !highlight?.label || highlight.label === "media";
+      if (isMediaType) {
+        const hasMedia = state.highlightMedia.some((hm) => hm.highlight_id === hId);
+        if (!hasMedia) {
+          set((s) => ({
+            sidebarOpen: false,
+            selectedHighlightId: null,
+            selectedSectionId: null,
+            highlights: s.highlights.filter((h) => h.id !== hId),
+          }));
+          return;
+        }
       }
     }
 

@@ -1,21 +1,23 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ImagePlus, FileText, X } from "lucide-react";
+import { ImagePlus, Layers, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TextSelection } from "@/hooks/useTextSelection";
 
 interface FloatingToolbarProps {
   selection: TextSelection;
-  onAttachMedia: () => void;
-  onReferenceFile: () => void;
+  onMedia: () => void;
+  onGraphics: () => void;
+  onCamera: () => void;
   onDismiss: () => void;
 }
 
 export function FloatingToolbar({
   selection,
-  onAttachMedia,
-  onReferenceFile,
+  onMedia,
+  onGraphics,
+  onCamera,
   onDismiss,
 }: FloatingToolbarProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -38,25 +40,37 @@ export function FloatingToolbar({
   return (
     <div
       ref={ref}
-      className="fixed z-50 flex items-center gap-1 rounded-lg border border-border bg-elevated px-1 py-1 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+      className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-white/20 bg-[oklch(0.22_0.005_260)] px-1 py-1 shadow-[0_4px_24px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-150"
     >
       <Button
         variant="ghost"
         size="sm"
         className="gap-2 text-xs"
-        onClick={onAttachMedia}
+        onClick={onMedia}
       >
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--highlight-blue)" }} />
         <ImagePlus className="h-3.5 w-3.5" />
-        Attach Media
+        Media
       </Button>
       <Button
         variant="ghost"
         size="sm"
         className="gap-2 text-xs"
-        onClick={onReferenceFile}
+        onClick={onGraphics}
       >
-        <FileText className="h-3.5 w-3.5" />
-        Reference File
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--highlight-green)" }} />
+        <Layers className="h-3.5 w-3.5" />
+        Graphics
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2 text-xs"
+        onClick={onCamera}
+      >
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--highlight-amber)" }} />
+        <Video className="h-3.5 w-3.5" />
+        On Camera
       </Button>
       <Button
         variant="ghost"

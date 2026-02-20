@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 import { ImagePlus } from "lucide-react";
-import { computeRenderSpans } from "@/lib/annotationEngine";
+import { computeRenderSpans, getSpanColor } from "@/lib/annotationEngine";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { Badge } from "@/components/ui/badge";
-import type { Section, MediaFile, FileReference } from "@/lib/supabase/types";
+import type { Section } from "@/lib/supabase/types";
 
 interface ScriptSectionProps {
   section: Section;
@@ -93,7 +93,7 @@ export function ScriptSection({ section }: ScriptSectionProps) {
               key={i}
               className={`annotation-highlight ${isSelected ? "ring-1 ring-ring" : ""}`}
               style={{
-                backgroundColor: "var(--highlight-blue)",
+                backgroundColor: getSpanColor(span.highlightIds, highlights),
               }}
               onClick={() => selectHighlight(span.highlightIds[0])}
             >

@@ -4,6 +4,7 @@ import { useEffect, useTransition } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScriptSection } from "./ScriptSection";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { CoverageLegend } from "./CoverageLegend";
 import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
@@ -59,7 +60,7 @@ export function ScriptViewer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleAttachMedia() {
+  function handleMedia() {
     if (!selection) return;
 
     startTransition(async () => {
@@ -68,7 +69,8 @@ export function ScriptViewer({
           sectionId: selection.sectionId,
           startOffset: selection.startOffset,
           endOffset: selection.endOffset,
-          label: selection.selectedText.slice(0, 50),
+          label: "media",
+          color: "var(--highlight-blue)",
         });
 
         addHighlight(highlight);
@@ -80,7 +82,7 @@ export function ScriptViewer({
     });
   }
 
-  function handleReferenceFile() {
+  function handleGraphics() {
     if (!selection) return;
 
     startTransition(async () => {
@@ -89,11 +91,32 @@ export function ScriptViewer({
           sectionId: selection.sectionId,
           startOffset: selection.startOffset,
           endOffset: selection.endOffset,
-          label: selection.selectedText.slice(0, 50),
+          label: "graphics",
+          color: "var(--highlight-green)",
         });
 
         addHighlight(highlight);
-        selectHighlight(highlight.id, "reference");
+        clearSelection();
+      } catch (err) {
+        console.error("Failed to create highlight:", err);
+      }
+    });
+  }
+
+  function handleOnCamera() {
+    if (!selection) return;
+
+    startTransition(async () => {
+      try {
+        const highlight = await createHighlight({
+          sectionId: selection.sectionId,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          label: "on_camera",
+          color: "var(--highlight-amber)",
+        });
+
+        addHighlight(highlight);
         clearSelection();
       } catch (err) {
         console.error("Failed to create highlight:", err);
@@ -106,6 +129,10 @@ export function ScriptViewer({
       {/* Script panel */}
       <ScrollArea className="flex-1">
         <div className="mx-auto max-w-3xl px-8 py-12">
+          {/* Coverage type legend */}
+          <div className="mb-8 flex justify-center">
+            <CoverageLegend />
+          </div>
           {sections.length === 0 ? (
             <div className="py-24 text-center text-muted-foreground">
               <p className="text-lg">No sections found.</p>
@@ -125,8 +152,9 @@ export function ScriptViewer({
       {selection && !isPending && (
         <FloatingToolbar
           selection={selection}
-          onAttachMedia={handleAttachMedia}
-          onReferenceFile={handleReferenceFile}
+          onMedia={handleMedia}
+          onGraphics={handleGraphics}
+          onCamera={handleOnCamera}
           onDismiss={clearSelection}
         />
       )}

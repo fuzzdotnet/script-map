@@ -1,5 +1,48 @@
 import type { Highlight } from "@/lib/supabase/types";
 
+// ============================================
+// COVERAGE TYPES
+// ============================================
+
+export type CoverageType = "media" | "graphics" | "on_camera";
+
+export interface CoverageTypeConfig {
+  type: CoverageType;
+  label: string;
+  color: string; // CSS variable reference
+}
+
+export const COVERAGE_TYPES: Record<CoverageType, CoverageTypeConfig> = {
+  media: { type: "media", label: "Media", color: "var(--highlight-blue)" },
+  graphics: { type: "graphics", label: "Graphics", color: "var(--highlight-green)" },
+  on_camera: { type: "on_camera", label: "On Camera", color: "var(--highlight-amber)" },
+};
+
+/** Get the coverage type from a highlight's label field */
+export function getCoverageType(highlight: Highlight): CoverageType {
+  if (highlight.label && highlight.label in COVERAGE_TYPES) {
+    return highlight.label as CoverageType;
+  }
+  return "media"; // default for legacy highlights
+}
+
+/** Get the CSS color for a highlight */
+export function getHighlightCssColor(highlight: Highlight): string {
+  return highlight.color || COVERAGE_TYPES[getCoverageType(highlight)].color;
+}
+
+/** Get the dominant color for a span covered by multiple highlights */
+export function getSpanColor(highlightIds: string[], allHighlights: Highlight[]): string {
+  if (highlightIds.length === 0) return "transparent";
+  const highlight = allHighlights.find((h) => h.id === highlightIds[0]);
+  if (!highlight) return COVERAGE_TYPES.media.color;
+  return getHighlightCssColor(highlight);
+}
+
+// ============================================
+// RENDER SPANS
+// ============================================
+
 export interface RenderSpan {
   text: string;
   highlightIds: string[];

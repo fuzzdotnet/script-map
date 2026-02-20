@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
-import { X, Upload, FileText, ImagePlus } from "lucide-react";
+import { useMemo, useCallback, useTransition } from "react";
+import { X, Upload, FileText, ImagePlus, Layers, Video, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,6 +10,7 @@ import { MediaUploader } from "@/components/media/MediaUploader";
 import { FileReferenceForm } from "@/components/media/FileReferenceForm";
 import { MediaGrid } from "@/components/media/MediaGrid";
 import { deleteHighlight } from "@/actions/highlights";
+import { getCoverageType, COVERAGE_TYPES } from "@/lib/annotationEngine";
 import type { MediaFile, FileReference } from "@/lib/supabase/types";
 
 interface MediaSidebarProps {
@@ -21,8 +22,10 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
   const closeSidebar = useAnnotationStore((s) => s.closeSidebar);
   const selectedHighlightId = useAnnotationStore((s) => s.selectedHighlightId);
   const selectedSectionId = useAnnotationStore((s) => s.selectedSectionId);
+  const removeHighlight = useAnnotationStore((s) => s.removeHighlight);
 
   // Select raw arrays (stable references)
+  const allHighlights = useAnnotationStore((s) => s.highlights);
   const allHighlightMedia = useAnnotationStore((s) => s.highlightMedia);
   const allSectionMedia = useAnnotationStore((s) => s.sectionMedia);
   const allMediaFiles = useAnnotationStore((s) => s.mediaFiles);
@@ -31,18 +34,42 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
   const activeTab = useAnnotationStore((s) => s.sidebarTab);
   const setActiveTab = useAnnotationStore((s) => s.setSidebarTab);
 
+  const [isDeleting, startDeleteTransition] = useTransition();
+
+  // Get the selected highlight and its coverage type
+  const selectedHighlight = useMemo(
+    () => selectedHighlightId ? allHighlights.find((h) => h.id === selectedHighlightId) : null,
+    [selectedHighlightId, allHighlights]
+  );
+
+  const coverageType = selectedHighlight ? getCoverageType(selectedHighlight) : "media";
+  const isMediaType = coverageType === "media";
+
   const handleClose = useCallback(() => {
-    // If a highlight is selected with no media, closeSidebar will remove it from client state.
+    // If a media highlight is selected with no media, closeSidebar will remove it from client state.
     // We also need to delete it from the database.
     const hId = selectedHighlightId;
-    if (hId) {
+    if (hId && isMediaType) {
       const hasMedia = allHighlightMedia.some((hm) => hm.highlight_id === hId);
       if (!hasMedia) {
         deleteHighlight(hId).catch(() => {});
       }
     }
     closeSidebar();
-  }, [selectedHighlightId, allHighlightMedia, closeSidebar]);
+  }, [selectedHighlightId, isMediaType, allHighlightMedia, closeSidebar]);
+
+  function handleDeleteHighlight() {
+    if (!selectedHighlightId) return;
+    startDeleteTransition(async () => {
+      try {
+        await deleteHighlight(selectedHighlightId);
+        removeHighlight(selectedHighlightId);
+        closeSidebar();
+      } catch (err) {
+        console.error("Failed to delete highlight:", err);
+      }
+    });
+  }
 
   // Derive media for the selected target using useMemo
   const { uploaded, references, totalMedia } = useMemo(() => {
@@ -70,6 +97,9 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
   const targetType = selectedHighlightId ? "highlight" : "section";
   const targetId = selectedHighlightId || selectedSectionId;
 
+  const coverageConfig = COVERAGE_TYPES[coverageType];
+  const CoverageIcon = coverageType === "graphics" ? Layers : coverageType === "on_camera" ? Video : ImagePlus;
+
   return (
     <AnimatePresence>
       {sidebarOpen && (
@@ -84,72 +114,107 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h3 className="text-sm font-semibold">
-                {targetType === "highlight" ? "Highlight Media" : "Section Media"}
+                {!isMediaType
+                  ? coverageConfig.label
+                  : targetType === "highlight"
+                    ? "Highlight Media"
+                    : "Section Media"
+                }
               </h3>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleClose}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Tab bar */}
-            <div className="flex border-b border-border">
-              <TabButton
-                active={activeTab === "media"}
-                onClick={() => setActiveTab("media")}
-                icon={<ImagePlus className="h-3.5 w-3.5" />}
-                label={`Media${totalMedia > 0 ? ` (${totalMedia})` : ""}`}
-              />
-              <TabButton
-                active={activeTab === "upload"}
-                onClick={() => setActiveTab("upload")}
-                icon={<Upload className="h-3.5 w-3.5" />}
-                label="Upload"
-              />
-              <TabButton
-                active={activeTab === "reference"}
-                onClick={() => setActiveTab("reference")}
-                icon={<FileText className="h-3.5 w-3.5" />}
-                label="Reference"
-              />
-            </div>
-
-            {/* Content */}
-            <ScrollArea className="flex-1">
-              <div className="p-4">
-                {activeTab === "media" && totalMedia > 0 && (
-                  <MediaGrid
-                    uploaded={uploaded}
-                    references={references}
-                    projectId={projectId}
-                  />
-                )}
-                {activeTab === "media" && totalMedia === 0 && (
-                  <div className="py-12 text-center text-muted-foreground">
-                    <ImagePlus className="mx-auto h-8 w-8 mb-3 opacity-50" />
-                    <p className="text-sm">No media attached yet.</p>
-                    <p className="text-xs mt-1">Upload files or add a reference.</p>
-                  </div>
-                )}
-
-                {activeTab === "upload" && targetId && (
-                  <MediaUploader
-                    projectId={projectId}
-                    targetType={targetType}
-                    targetId={targetId}
-                    onUploadComplete={() => setActiveTab("media")}
-                  />
-                )}
-
-                {activeTab === "reference" && targetId && (
-                  <FileReferenceForm
-                    projectId={projectId}
-                    targetType={targetType}
-                    targetId={targetId}
-                    onComplete={() => setActiveTab("media")}
-                  />
-                )}
+            {/* Non-media highlight: simple info panel */}
+            {selectedHighlightId && !isMediaType && (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div
+                  className="flex items-center justify-center h-16 w-16 rounded-full mb-4"
+                  style={{ backgroundColor: coverageConfig.color }}
+                >
+                  <CoverageIcon className="h-7 w-7 text-foreground" />
+                </div>
+                <p className="text-lg font-medium mb-1">{coverageConfig.label}</p>
+                <p className="text-xs text-muted-foreground mb-6">
+                  This text is marked as <span className="font-medium">{coverageConfig.label.toLowerCase()}</span> coverage.
+                </p>
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive gap-2"
+                  onClick={handleDeleteHighlight}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove highlight
+                </Button>
               </div>
-            </ScrollArea>
+            )}
+
+            {/* Media highlight or section: tabs + content */}
+            {(isMediaType || selectedSectionId) && (
+              <>
+                {/* Tab bar */}
+                <div className="flex border-b border-border">
+                  <TabButton
+                    active={activeTab === "media"}
+                    onClick={() => setActiveTab("media")}
+                    icon={<ImagePlus className="h-3.5 w-3.5" />}
+                    label={`Media${totalMedia > 0 ? ` (${totalMedia})` : ""}`}
+                  />
+                  <TabButton
+                    active={activeTab === "upload"}
+                    onClick={() => setActiveTab("upload")}
+                    icon={<Upload className="h-3.5 w-3.5" />}
+                    label="Upload"
+                  />
+                  <TabButton
+                    active={activeTab === "reference"}
+                    onClick={() => setActiveTab("reference")}
+                    icon={<FileText className="h-3.5 w-3.5" />}
+                    label="Reference"
+                  />
+                </div>
+
+                {/* Content */}
+                <ScrollArea className="flex-1">
+                  <div className="p-4">
+                    {activeTab === "media" && totalMedia > 0 && (
+                      <MediaGrid
+                        uploaded={uploaded}
+                        references={references}
+                        projectId={projectId}
+                      />
+                    )}
+                    {activeTab === "media" && totalMedia === 0 && (
+                      <div className="py-12 text-center text-muted-foreground">
+                        <ImagePlus className="mx-auto h-8 w-8 mb-3 opacity-50" />
+                        <p className="text-sm">No media attached yet.</p>
+                        <p className="text-xs mt-1">Upload files or add a reference.</p>
+                      </div>
+                    )}
+
+                    {activeTab === "upload" && targetId && (
+                      <MediaUploader
+                        projectId={projectId}
+                        targetType={targetType}
+                        targetId={targetId}
+                        onUploadComplete={() => setActiveTab("media")}
+                      />
+                    )}
+
+                    {activeTab === "reference" && targetId && (
+                      <FileReferenceForm
+                        projectId={projectId}
+                        targetType={targetType}
+                        targetId={targetId}
+                        onComplete={() => setActiveTab("media")}
+                      />
+                    )}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
           </div>
         </motion.div>
       )}

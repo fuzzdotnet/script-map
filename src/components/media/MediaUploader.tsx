@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { formatFileSize } from "@/lib/utils";
 import { Upload, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import {
@@ -176,12 +177,4 @@ export function MediaUploader({
       )}
     </div>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }

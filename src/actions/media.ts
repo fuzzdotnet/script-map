@@ -69,6 +69,34 @@ export async function getMediaFilesForProject(projectId: string): Promise<MediaF
   return data;
 }
 
+export async function getSignedUrlsForProject(
+  projectId: string
+): Promise<{ filename: string; url: string; sizeBytes: number }[]> {
+  const supabase = createServerClient();
+
+  const { data: files, error } = await supabase
+    .from("media_files")
+    .select("filename, storage_path, size_bytes")
+    .eq("project_id", projectId)
+    .eq("upload_status", "complete");
+
+  if (error) throw new Error(`Failed to fetch media files: ${error.message}`);
+  if (!files || files.length === 0) return [];
+
+  const paths = files.map((f) => f.storage_path);
+  const { data: urlData, error: urlError } = await supabase.storage
+    .from("script-map-media")
+    .createSignedUrls(paths, 3600);
+
+  if (urlError) throw new Error(`Failed to create signed URLs: ${urlError.message}`);
+
+  return files.map((file, index) => ({
+    filename: file.filename,
+    url: urlData[index]?.signedUrl ?? "",
+    sizeBytes: file.size_bytes,
+  }));
+}
+
 // ============================================
 // FILE REFERENCES
 // ============================================

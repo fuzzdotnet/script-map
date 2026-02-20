@@ -353,12 +353,17 @@ function HighlightNote({
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
-      <button
+      <div
         onClick={() => setIsEditing(true)}
-        className="w-full text-left text-sm text-foreground/80 whitespace-pre-wrap rounded-md bg-elevated px-3 py-2 hover:bg-elevated/80 transition-colors cursor-text"
+        className="w-full text-left text-sm text-foreground/80 rounded-md bg-elevated px-3 py-2 hover:bg-elevated/80 transition-colors cursor-text"
       >
-        {note}
-      </button>
+        {note.split("\n").map((line, i) => (
+          <span key={i}>
+            {i > 0 && <br />}
+            {line}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,12 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 function CallbackHandler() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const handled = useRef(false);
 
@@ -29,26 +28,26 @@ function CallbackHandler() {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-          router.push(redirectTo);
+          // Full page navigation so server components see the new session cookies
+          window.location.href = redirectTo;
           return;
         }
       }
 
       // Implicit flow: check if tokens arrived via hash fragment
-      // createBrowserClient auto-detects hash fragments when getSession is called
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        router.push(redirectTo);
+        window.location.href = redirectTo;
         return;
       }
 
-      router.push("/login");
+      window.location.href = "/login";
     }
 
     handleAuth();
-  }, [searchParams, router]);
+  }, [searchParams]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">

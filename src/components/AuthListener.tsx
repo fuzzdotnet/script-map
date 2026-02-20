@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -10,11 +10,9 @@ import { createClient } from "@/lib/supabase/client";
  * Redirects to /dashboard on sign-in.
  */
 export function AuthListener() {
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // Only act on pages where we wouldn't expect an auth redirect
     // Skip the callback page (it handles its own flow)
     if (pathname === "/auth/callback") return;
 
@@ -28,14 +26,15 @@ export function AuthListener() {
         const match = document.cookie.match(/auth_redirect_to=([^;]*)/);
         const redirectTo = match ? decodeURIComponent(match[1]) : "/dashboard";
         document.cookie = "auth_redirect_to=; path=/; max-age=0";
-        router.push(redirectTo);
+        // Full page navigation so server components see the new session cookies
+        window.location.href = redirectTo;
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, pathname]);
+  }, [pathname]);
 
   return null;
 }

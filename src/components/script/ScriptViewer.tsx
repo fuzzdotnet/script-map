@@ -133,17 +133,25 @@ export function ScriptViewer({
 
     startTransition(async () => {
       try {
-        const highlight = await createHighlight({
-          sectionId: selection.sectionId,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          label: "media",
-          color: "var(--highlight-blue)",
-        });
+        const highlights = await Promise.all(
+          selection.ranges.map((range) =>
+            createHighlight({
+              sectionId: range.sectionId,
+              startOffset: range.startOffset,
+              endOffset: range.endOffset,
+              label: "media",
+              color: "var(--highlight-blue)",
+            })
+          )
+        );
 
-        addHighlight(highlight);
-        markAsNew(highlight.id);
-        selectHighlight(highlight.id, "upload");
+        for (const h of highlights) {
+          addHighlight(h);
+          markAsNew(h.id);
+        }
+        if (highlights.length > 0) {
+          selectHighlight(highlights[0].id, "upload");
+        }
         clearSelection();
       } catch (err) {
         console.error("Failed to create highlight:", err);
@@ -156,16 +164,22 @@ export function ScriptViewer({
 
     startTransition(async () => {
       try {
-        const highlight = await createHighlight({
-          sectionId: selection.sectionId,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          label: "graphics",
-          color: "var(--highlight-green)",
-        });
+        const highlights = await Promise.all(
+          selection.ranges.map((range) =>
+            createHighlight({
+              sectionId: range.sectionId,
+              startOffset: range.startOffset,
+              endOffset: range.endOffset,
+              label: "graphics",
+              color: "var(--highlight-green)",
+            })
+          )
+        );
 
-        addHighlight(highlight);
-        markAsNew(highlight.id);
+        for (const h of highlights) {
+          addHighlight(h);
+          markAsNew(h.id);
+        }
         clearSelection();
       } catch (err) {
         console.error("Failed to create highlight:", err);
@@ -178,16 +192,22 @@ export function ScriptViewer({
 
     startTransition(async () => {
       try {
-        const highlight = await createHighlight({
-          sectionId: selection.sectionId,
-          startOffset: selection.startOffset,
-          endOffset: selection.endOffset,
-          label: "on_camera",
-          color: "var(--highlight-amber)",
-        });
+        const highlights = await Promise.all(
+          selection.ranges.map((range) =>
+            createHighlight({
+              sectionId: range.sectionId,
+              startOffset: range.startOffset,
+              endOffset: range.endOffset,
+              label: "on_camera",
+              color: "var(--highlight-amber)",
+            })
+          )
+        );
 
-        addHighlight(highlight);
-        markAsNew(highlight.id);
+        for (const h of highlights) {
+          addHighlight(h);
+          markAsNew(h.id);
+        }
         clearSelection();
       } catch (err) {
         console.error("Failed to create highlight:", err);

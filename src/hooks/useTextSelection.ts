@@ -2,17 +2,21 @@
 
 import { useState, useCallback, useEffect } from "react";
 
-export interface TextSelection {
+export interface SectionRange {
   sectionId: string;
   startOffset: number;
   endOffset: number;
+}
+
+export interface TextSelection {
+  ranges: SectionRange[];
   selectedText: string;
   rect: DOMRect;
 }
 
 /**
  * Hook that converts browser text selections into section-relative char offsets.
- * Sections must have data-section-id attributes on their container elements.
+ * Supports selections that span multiple sections — returns one range per section.
  */
 export function useTextSelection() {
   const [selection, setSelection] = useState<TextSelection | null>(null);
@@ -27,42 +31,77 @@ export function useTextSelection() {
     const selectedText = sel.toString().trim();
     if (!selectedText) return;
 
-    // Walk up from the selection to find the section container
-    const sectionEl = findSectionContainer(range.startContainer);
-    if (!sectionEl) {
-      setSelection(null);
-      return;
-    }
-
-    // Make sure the selection stays within a single section
+    const startSectionEl = findSectionContainer(range.startContainer);
     const endSectionEl = findSectionContainer(range.endContainer);
-    if (!endSectionEl || endSectionEl !== sectionEl) {
+    if (!startSectionEl || !endSectionEl) {
       setSelection(null);
       return;
     }
 
-    const sectionId = sectionEl.getAttribute("data-section-id");
-    if (!sectionId) {
-      setSelection(null);
+    // Single-section selection (common case)
+    if (startSectionEl === endSectionEl) {
+      const sectionId = startSectionEl.getAttribute("data-section-id");
+      if (!sectionId) { setSelection(null); return; }
+
+      const textEl = startSectionEl.querySelector("[data-section-text]") || startSectionEl;
+      const offsets = domRangeToTextOffsets(textEl, range);
+      if (!offsets) { setSelection(null); return; }
+
+      setSelection({
+        ranges: [{ sectionId, startOffset: offsets.start, endOffset: offsets.end }],
+        selectedText,
+        rect: range.getBoundingClientRect(),
+      });
       return;
     }
 
-    // Convert DOM range offsets to plain text offsets within the section
-    const textContentEl = sectionEl.querySelector("[data-section-text]") || sectionEl;
-    const offsets = domRangeToTextOffsets(textContentEl, range);
-    if (!offsets) {
-      setSelection(null);
-      return;
+    // Multi-section selection — collect ranges for each section
+    const container = startSectionEl.parentElement;
+    if (!container) { setSelection(null); return; }
+
+    const allSections = Array.from(container.querySelectorAll("[data-section-id]"));
+    const startIdx = allSections.indexOf(startSectionEl);
+    const endIdx = allSections.indexOf(endSectionEl);
+    if (startIdx === -1 || endIdx === -1) { setSelection(null); return; }
+
+    const ranges: SectionRange[] = [];
+
+    for (let i = startIdx; i <= endIdx; i++) {
+      const sectionEl = allSections[i];
+      const sectionId = sectionEl.getAttribute("data-section-id");
+      if (!sectionId) continue;
+
+      // Skip headings (they don't have data-section-text)
+      const textEl = sectionEl.querySelector("[data-section-text]");
+      if (!textEl) continue;
+
+      const fullLength = (textEl.textContent || "").length;
+      if (fullLength === 0) continue;
+
+      if (i === startIdx) {
+        // First section: from selection start to end of section text
+        const startOffset = getOffsetAtRangeStart(textEl, range);
+        if (startOffset !== null && startOffset < fullLength) {
+          ranges.push({ sectionId, startOffset, endOffset: fullLength });
+        }
+      } else if (i === endIdx) {
+        // Last section: from start of section text to selection end
+        const endOffset = getOffsetAtRangeEnd(textEl, range);
+        if (endOffset !== null && endOffset > 0) {
+          ranges.push({ sectionId, startOffset: 0, endOffset });
+        }
+      } else {
+        // Middle section: entire text
+        ranges.push({ sectionId, startOffset: 0, endOffset: fullLength });
+      }
     }
 
-    const rect = range.getBoundingClientRect();
+    if (ranges.length === 0) { setSelection(null); return; }
 
     setSelection({
-      sectionId,
-      startOffset: offsets.start,
-      endOffset: offsets.end,
+      ranges,
       selectedText,
-      rect,
+      rect: range.getBoundingClientRect(),
     });
   }, []);
 
@@ -114,6 +153,30 @@ function domRangeToTextOffsets(
     if (start === end) return null;
 
     return { start: Math.min(start, end), end: Math.max(start, end) };
+  } catch {
+    return null;
+  }
+}
+
+/** Get the text offset where the selection starts within a container */
+function getOffsetAtRangeStart(container: Node, range: Range): number | null {
+  try {
+    const preRange = document.createRange();
+    preRange.selectNodeContents(container);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    return preRange.toString().length;
+  } catch {
+    return null;
+  }
+}
+
+/** Get the text offset where the selection ends within a container */
+function getOffsetAtRangeEnd(container: Node, range: Range): number | null {
+  try {
+    const preRange = document.createRange();
+    preRange.selectNodeContents(container);
+    preRange.setEnd(range.endContainer, range.endOffset);
+    return preRange.toString().length;
   } catch {
     return null;
   }

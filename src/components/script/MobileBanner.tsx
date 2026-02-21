@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { Monitor, X } from "lucide-react";
 
+const STORAGE_KEY = "scriptmap-mobile-banner-dismissed";
+
 export function MobileBanner() {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   if (dismissed) return null;
 
@@ -15,7 +23,10 @@ export function MobileBanner() {
         Open on desktop to add and view annotations
       </p>
       <button
-        onClick={() => setDismissed(true)}
+        onClick={() => {
+          try { localStorage.setItem(STORAGE_KEY, "1"); } catch {}
+          setDismissed(true);
+        }}
         className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
       >
         <X className="h-3.5 w-3.5" />

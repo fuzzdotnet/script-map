@@ -26,6 +26,7 @@ interface TopBarProps {
   role?: ProjectRole | "none";
   isMember?: boolean;
   isLoggedIn?: boolean;
+  ownerEmail?: string;
 }
 
 export function TopBar({
@@ -34,6 +35,7 @@ export function TopBar({
   role = "none",
   isMember = false,
   isLoggedIn = false,
+  ownerEmail,
 }: TopBarProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -161,6 +163,7 @@ export function TopBar({
           open={inviteOpen}
           onOpenChange={setInviteOpen}
           projectId={project.id}
+          ownerEmail={ownerEmail}
         />
       )}
     </header>

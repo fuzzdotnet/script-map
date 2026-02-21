@@ -19,9 +19,10 @@ interface InviteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  ownerEmail?: string;
 }
 
-export function InviteDialog({ open, onOpenChange, projectId }: InviteDialogProps) {
+export function InviteDialog({ open, onOpenChange, projectId, ownerEmail }: InviteDialogProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -145,9 +146,19 @@ export function InviteDialog({ open, onOpenChange, projectId }: InviteDialogProp
           )}
         </form>
 
-        {members.length > 0 && (
+        {(ownerEmail || members.length > 0) && (
           <div className="mt-2 space-y-1">
             <p className="text-xs text-muted-foreground font-medium mb-2">Members</p>
+            {ownerEmail && (
+              <div className="flex items-center justify-between py-2 px-2 -mx-2 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-sm truncate">{ownerEmail}</span>
+                  <Badge variant="outline" className="text-[0.65rem] shrink-0">
+                    owner
+                  </Badge>
+                </div>
+              </div>
+            )}
             {members.map((member) => (
               <div
                 key={member.id}

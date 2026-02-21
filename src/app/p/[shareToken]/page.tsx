@@ -69,6 +69,7 @@ export default async function ProjectPage({
         role={role}
         isMember={isMember}
         isLoggedIn={!!user}
+        ownerEmail={role === "owner" ? user?.email ?? undefined : undefined}
       />
       <main className="flex flex-1 overflow-hidden">
         <ScriptViewer

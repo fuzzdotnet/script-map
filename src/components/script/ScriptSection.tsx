@@ -99,7 +99,7 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
         <MarginGutter highlights={highlights} sectionBody={section.body} />
       )}
 
-      <p className="script-text text-foreground/90" data-section-text>
+      <p className="script-text text-foreground/90 selection:bg-highlight-blue selection:text-foreground" data-section-text>
         {spans.map((span, i) => {
           if (span.highlightIds.length === 0) {
             return <span key={i}>{span.text}</span>;

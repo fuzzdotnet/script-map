@@ -206,7 +206,7 @@ export function ScriptViewer({
               <p className="mt-2 text-sm">This script appears to be empty.</p>
             </div>
           ) : (
-            <div className="script-sections space-y-6">
+            <div className="space-y-6">
               {sections.map((section) => (
                 <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} />
               ))}

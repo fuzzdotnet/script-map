@@ -28,7 +28,20 @@ export default async function ProjectPage({
 
   if (!project) notFound();
 
-  // Compute the user's role for this project
+  // Fetch all data + members in one parallel batch
+  const [sections, highlights, mediaFiles, fileReferences, highlightMedia, sectionMedia, comments, members] =
+    await Promise.all([
+      getProjectSections(project.id),
+      getHighlightsForProject(project.id),
+      getMediaFilesForProject(project.id),
+      getFileReferencesForProject(project.id),
+      getHighlightMediaForProject(project.id),
+      getSectionMediaForProject(project.id),
+      getCommentsForProject(project.id),
+      user ? listMembers(project.id) : Promise.resolve([]),
+    ]);
+
+  // Compute role from already-fetched data (no extra queries)
   let role: ProjectRole | "none" = "none";
   let isMember = false;
 
@@ -37,8 +50,6 @@ export default async function ProjectPage({
       role = "owner";
       isMember = true;
     } else {
-      // Check membership
-      const members = await listMembers(project.id);
       const email = user.email?.toLowerCase();
       const membership = members.find(
         (m) => m.user_id === user.id || m.invited_email === email
@@ -52,19 +63,7 @@ export default async function ProjectPage({
 
   const canEdit = role === "owner" || role === "editor";
 
-  // Fetch all data in parallel
-  const [sections, highlights, mediaFiles, fileReferences, highlightMedia, sectionMedia, comments] =
-    await Promise.all([
-      getProjectSections(project.id),
-      getHighlightsForProject(project.id),
-      getMediaFilesForProject(project.id),
-      getFileReferencesForProject(project.id),
-      getHighlightMediaForProject(project.id),
-      getSectionMediaForProject(project.id),
-      getCommentsForProject(project.id),
-    ]);
-
-  // Collect unique user IDs from highlights, comments, and current user, then batch-fetch profiles
+  // Batch-fetch profiles for all referenced users
   const userIds = new Set<string>();
   if (user) userIds.add(user.id);
   for (const h of highlights) {

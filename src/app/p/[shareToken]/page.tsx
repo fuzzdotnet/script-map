@@ -64,8 +64,9 @@ export default async function ProjectPage({
       getCommentsForProject(project.id),
     ]);
 
-  // Collect unique user IDs from highlights and comments, then batch-fetch profiles
+  // Collect unique user IDs from highlights, comments, and current user, then batch-fetch profiles
   const userIds = new Set<string>();
+  if (user) userIds.add(user.id);
   for (const h of highlights) {
     if (h.created_by) userIds.add(h.created_by);
   }

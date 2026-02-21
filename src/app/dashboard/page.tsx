@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ProjectList } from "@/components/ProjectList";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -9,6 +9,7 @@ import {
   getProjectHighlightCount,
 } from "@/actions/projects";
 import { claimPendingInvites } from "@/actions/members";
+import { getProfile } from "@/actions/profiles";
 import { getAuthUser } from "@/lib/supabase/auth";
 import type { ProjectRole } from "@/actions/projects";
 
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const user = await getAuthUser();
   if (!user) redirect("/login");
+
+  const profile = await getProfile(user.id);
 
   // Claim any pending invites for this user
   if (user.email) {
@@ -79,8 +82,20 @@ export default async function DashboardPage() {
       </section>
 
       <footer className="mt-auto py-8 text-center">
+        {profile && (
+          <p className="text-sm font-medium mb-0.5">{profile.display_name}</p>
+        )}
         <p className="text-xs text-muted-foreground/50 mb-2">{user.email}</p>
-        <SignOutButton />
+        <div className="flex items-center justify-center gap-3">
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Settings className="h-3 w-3" />
+            Settings
+          </Link>
+          <SignOutButton />
+        </div>
       </footer>
     </div>
   );

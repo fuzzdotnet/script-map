@@ -8,6 +8,8 @@ import {
   getSectionMediaForProject,
 } from "@/actions/media";
 import { listMembers } from "@/actions/members";
+import { getProfiles } from "@/actions/profiles";
+import { getCommentsForProject } from "@/actions/comments";
 import { getAuthUser } from "@/lib/supabase/auth";
 import { ScriptViewer } from "@/components/script/ScriptViewer";
 import { TopBar } from "@/components/layout/TopBar";
@@ -51,7 +53,7 @@ export default async function ProjectPage({
   const canEdit = role === "owner" || role === "editor";
 
   // Fetch all data in parallel
-  const [sections, highlights, mediaFiles, fileReferences, highlightMedia, sectionMedia] =
+  const [sections, highlights, mediaFiles, fileReferences, highlightMedia, sectionMedia, comments] =
     await Promise.all([
       getProjectSections(project.id),
       getHighlightsForProject(project.id),
@@ -59,7 +61,20 @@ export default async function ProjectPage({
       getFileReferencesForProject(project.id),
       getHighlightMediaForProject(project.id),
       getSectionMediaForProject(project.id),
+      getCommentsForProject(project.id),
     ]);
+
+  // Collect unique user IDs from highlights and comments, then batch-fetch profiles
+  const userIds = new Set<string>();
+  for (const h of highlights) {
+    if (h.created_by) userIds.add(h.created_by);
+  }
+  for (const c of comments) {
+    userIds.add(c.user_id);
+  }
+  const profiles = await getProfiles([...userIds]);
+
+  const canComment = role !== "none";
 
   return (
     <div className="flex h-screen flex-col">
@@ -81,7 +96,11 @@ export default async function ProjectPage({
           initialSectionMedia={sectionMedia}
           initialMediaFiles={mediaFiles}
           initialFileReferences={fileReferences}
+          initialComments={comments}
+          profiles={profiles}
+          currentUserId={user?.id}
           canEdit={canEdit}
+          canComment={canComment}
         />
       </main>
     </div>

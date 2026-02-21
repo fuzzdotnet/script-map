@@ -35,7 +35,7 @@ export async function createHighlight(params: {
   collaboratorId?: string;
 }): Promise<Highlight> {
   const projectId = await getProjectIdForSection(params.sectionId);
-  await requireProjectEditor(projectId);
+  const user = await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 
@@ -48,6 +48,7 @@ export async function createHighlight(params: {
       label: params.label || null,
       color: params.color || null,
       collaborator_id: params.collaboratorId || null,
+      created_by: user.id,
     })
     .select()
     .single();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback, useTransition } from "react";
-import { X, Upload, FileText, ImagePlus, Layers, Video, Trash2, Pencil, MessageSquare } from "lucide-react";
+import { X, Upload, FileText, ImagePlus, Layers, Video, Trash2, MessageSquare, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
@@ -9,14 +9,17 @@ import { MediaUploader } from "@/components/media/MediaUploader";
 import { FileReferenceForm } from "@/components/media/FileReferenceForm";
 import { MediaGrid } from "@/components/media/MediaGrid";
 import { deleteHighlight, updateHighlightNote } from "@/actions/highlights";
+import { addComment, deleteComment } from "@/actions/comments";
 import { getCoverageType, COVERAGE_TYPES } from "@/lib/annotationEngine";
 import type { MediaFile, FileReference } from "@/lib/supabase/types";
 
 interface MediaSidebarProps {
   projectId: string;
+  canEdit?: boolean;
+  canComment?: boolean;
 }
 
-export function MediaSidebar({ projectId }: MediaSidebarProps) {
+export function MediaSidebar({ projectId, canEdit = false, canComment = false }: MediaSidebarProps) {
   const sidebarOpen = useAnnotationStore((s) => s.sidebarOpen);
   const closeSidebar = useAnnotationStore((s) => s.closeSidebar);
   const selectedHighlightId = useAnnotationStore((s) => s.selectedHighlightId);
@@ -29,6 +32,9 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
   const allSectionMedia = useAnnotationStore((s) => s.sectionMedia);
   const allMediaFiles = useAnnotationStore((s) => s.mediaFiles);
   const allFileReferences = useAnnotationStore((s) => s.fileReferences);
+  const allComments = useAnnotationStore((s) => s.comments);
+  const profiles = useAnnotationStore((s) => s.profiles);
+  const currentUserId = useAnnotationStore((s) => s.currentUserId);
 
   const activeTab = useAnnotationStore((s) => s.sidebarTab);
   const setActiveTab = useAnnotationStore((s) => s.setSidebarTab);
@@ -43,6 +49,19 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
 
   const coverageType = selectedHighlight ? getCoverageType(selectedHighlight) : "media";
   const isMediaType = coverageType === "media";
+
+  // Get attribution name
+  const creatorName = useMemo(() => {
+    if (!selectedHighlight?.created_by) return null;
+    const profile = profiles[selectedHighlight.created_by];
+    return profile?.display_name ?? null;
+  }, [selectedHighlight, profiles]);
+
+  // Get comments for selected highlight
+  const highlightComments = useMemo(
+    () => selectedHighlightId ? allComments.filter((c) => c.highlight_id === selectedHighlightId) : [],
+    [selectedHighlightId, allComments]
+  );
 
   const handleClose = useCallback(() => {
     // If a media highlight is selected with no media, closeSidebar will remove it from client state.
@@ -136,94 +155,156 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
                     <CoverageIcon className="h-7 w-7 text-foreground" />
                   </div>
                   <p className="text-lg font-medium mb-1">{coverageConfig.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    This text is marked as <span className="font-medium">{coverageConfig.label.toLowerCase()}</span> coverage.
-                  </p>
+                  {creatorName ? (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground/70">{creatorName}</span> marked this as {coverageConfig.label.toLowerCase()}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      This text is marked as <span className="font-medium">{coverageConfig.label.toLowerCase()}</span> coverage.
+                    </p>
+                  )}
                 </div>
 
                 {/* Editable note */}
-                <div className="px-4 pb-4 flex-1">
-                  <HighlightNote
-                    highlightId={selectedHighlightId}
-                    initialNote={selectedHighlight?.note ?? null}
-                  />
-                </div>
+                {canEdit && (
+                  <div className="px-4 pb-4">
+                    <HighlightNote
+                      highlightId={selectedHighlightId}
+                      initialNote={selectedHighlight?.note ?? null}
+                    />
+                  </div>
+                )}
 
-                <div className="px-4 pb-6 text-center">
-                  <Button
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive gap-2"
-                    onClick={handleDeleteHighlight}
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Remove highlight
-                  </Button>
-                </div>
+                {/* Comments */}
+                {selectedHighlightId && (
+                  <div className="px-4 pb-4 flex-1">
+                    <CommentThread
+                      highlightId={selectedHighlightId}
+                      comments={highlightComments}
+                      profiles={profiles}
+                      currentUserId={currentUserId}
+                      canComment={canComment}
+                    />
+                  </div>
+                )}
+
+                {canEdit && (
+                  <div className="px-4 pb-6 text-center">
+                    <Button
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive gap-2"
+                      onClick={handleDeleteHighlight}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove highlight
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Media highlight or section: tabs + content */}
             {(isMediaType || selectedSectionId) && (
               <>
+                {/* Attribution for media highlights */}
+                {selectedHighlightId && creatorName && (
+                  <div className="px-4 py-2 text-xs text-muted-foreground border-b border-border">
+                    <span className="font-medium text-foreground/70">{creatorName}</span> added this media highlight
+                  </div>
+                )}
+
                 {/* Tab bar */}
-                <div className="flex border-b border-border">
-                  <TabButton
-                    active={activeTab === "media"}
-                    onClick={() => setActiveTab("media")}
-                    icon={<ImagePlus className="h-3.5 w-3.5" />}
-                    label={`Media${totalMedia > 0 ? ` (${totalMedia})` : ""}`}
-                  />
-                  <TabButton
-                    active={activeTab === "upload"}
-                    onClick={() => setActiveTab("upload")}
-                    icon={<Upload className="h-3.5 w-3.5" />}
-                    label="Upload"
-                  />
-                  <TabButton
-                    active={activeTab === "reference"}
-                    onClick={() => setActiveTab("reference")}
-                    icon={<FileText className="h-3.5 w-3.5" />}
-                    label="Reference"
-                  />
-                </div>
+                {canEdit && (
+                  <div className="flex border-b border-border">
+                    <TabButton
+                      active={activeTab === "media"}
+                      onClick={() => setActiveTab("media")}
+                      icon={<ImagePlus className="h-3.5 w-3.5" />}
+                      label={`Media${totalMedia > 0 ? ` (${totalMedia})` : ""}`}
+                    />
+                    <TabButton
+                      active={activeTab === "upload"}
+                      onClick={() => setActiveTab("upload")}
+                      icon={<Upload className="h-3.5 w-3.5" />}
+                      label="Upload"
+                    />
+                    <TabButton
+                      active={activeTab === "reference"}
+                      onClick={() => setActiveTab("reference")}
+                      icon={<FileText className="h-3.5 w-3.5" />}
+                      label="Reference"
+                    />
+                  </div>
+                )}
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                  <div className="p-4">
-                    {activeTab === "media" && totalMedia > 0 && (
-                      <MediaGrid
-                        uploaded={uploaded}
-                        references={references}
-                        projectId={projectId}
-                      />
-                    )}
-                    {activeTab === "media" && totalMedia === 0 && (
-                      <div className="py-12 text-center text-muted-foreground">
-                        <ImagePlus className="mx-auto h-8 w-8 mb-3 opacity-50" />
-                        <p className="text-sm">No media attached yet.</p>
-                        <p className="text-xs mt-1">Upload files or add a reference.</p>
-                      </div>
-                    )}
+                  {canEdit ? (
+                    <div className="p-4">
+                      {activeTab === "media" && totalMedia > 0 && (
+                        <MediaGrid
+                          uploaded={uploaded}
+                          references={references}
+                          projectId={projectId}
+                        />
+                      )}
+                      {activeTab === "media" && totalMedia === 0 && (
+                        <div className="py-12 text-center text-muted-foreground">
+                          <ImagePlus className="mx-auto h-8 w-8 mb-3 opacity-50" />
+                          <p className="text-sm">No media attached yet.</p>
+                          <p className="text-xs mt-1">Upload files or add a reference.</p>
+                        </div>
+                      )}
 
-                    {activeTab === "upload" && targetId && (
-                      <MediaUploader
-                        projectId={projectId}
-                        targetType={targetType}
-                        targetId={targetId}
-                        onUploadComplete={() => setActiveTab("media")}
-                      />
-                    )}
+                      {activeTab === "upload" && targetId && (
+                        <MediaUploader
+                          projectId={projectId}
+                          targetType={targetType}
+                          targetId={targetId}
+                          onUploadComplete={() => setActiveTab("media")}
+                        />
+                      )}
 
-                    {activeTab === "reference" && targetId && (
-                      <FileReferenceForm
-                        projectId={projectId}
-                        targetType={targetType}
-                        targetId={targetId}
-                        onComplete={() => setActiveTab("media")}
+                      {activeTab === "reference" && targetId && (
+                        <FileReferenceForm
+                          projectId={projectId}
+                          targetType={targetType}
+                          targetId={targetId}
+                          onComplete={() => setActiveTab("media")}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4">
+                      {totalMedia > 0 ? (
+                        <MediaGrid
+                          uploaded={uploaded}
+                          references={references}
+                          projectId={projectId}
+                        />
+                      ) : (
+                        <div className="py-12 text-center text-muted-foreground">
+                          <ImagePlus className="mx-auto h-8 w-8 mb-3 opacity-50" />
+                          <p className="text-sm">No media attached yet.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Comments for media highlights */}
+                  {selectedHighlightId && (
+                    <div className="px-4 pb-4 border-t border-border mt-2 pt-4">
+                      <CommentThread
+                        highlightId={selectedHighlightId}
+                        comments={highlightComments}
+                        profiles={profiles}
+                        currentUserId={currentUserId}
+                        canComment={canComment}
                       />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -231,6 +312,150 @@ export function MediaSidebar({ projectId }: MediaSidebarProps) {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function CommentThread({
+  highlightId,
+  comments,
+  profiles,
+  currentUserId,
+  canComment,
+}: {
+  highlightId: string;
+  comments: { id: string; user_id: string; body: string; created_at: string }[];
+  profiles: Record<string, { display_name: string }>;
+  currentUserId: string | null;
+  canComment: boolean;
+}) {
+  const [body, setBody] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const storeAddComment = useAnnotationStore((s) => s.addComment);
+  const storeRemoveComment = useAnnotationStore((s) => s.removeComment);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  function handleSubmit() {
+    const trimmed = body.trim();
+    if (!trimmed) return;
+
+    startTransition(async () => {
+      try {
+        const comment = await addComment(highlightId, trimmed);
+        storeAddComment(comment);
+        setBody("");
+      } catch (err) {
+        console.error("Failed to add comment:", err);
+      }
+    });
+  }
+
+  function handleDelete(commentId: string) {
+    startTransition(async () => {
+      try {
+        await deleteComment(commentId);
+        storeRemoveComment(commentId);
+      } catch (err) {
+        console.error("Failed to delete comment:", err);
+      }
+    });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  }
+
+  function formatTime(dateStr: string) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  return (
+    <div className="space-y-3">
+      {comments.length > 0 && (
+        <label className="text-xs font-medium text-muted-foreground">Comments</label>
+      )}
+
+      {comments.map((comment) => {
+        const profile = profiles[comment.user_id];
+        const isOwn = comment.user_id === currentUserId;
+
+        return (
+          <div key={comment.id} className="group/comment">
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-medium">
+                    {profile?.display_name ?? "Unknown"}
+                  </span>
+                  <span className="text-[0.65rem] text-muted-foreground/50">
+                    {formatTime(comment.created_at)}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground/80 mt-0.5">
+                  {comment.body.split("\n").map((line, i) => (
+                    <span key={i}>
+                      {i > 0 && <br />}
+                      {line}
+                    </span>
+                  ))}
+                </p>
+              </div>
+              {isOwn && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 shrink-0 text-destructive hover:text-destructive opacity-0 group-hover/comment:opacity-100 transition-opacity"
+                  onClick={() => handleDelete(comment.id)}
+                  disabled={isPending}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {canComment && (
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add a comment..."
+            rows={1}
+            className="flex-1 rounded-md border border-border bg-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={handleSubmit}
+            disabled={isPending || !body.trim()}
+          >
+            {isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -4,9 +4,11 @@ import { create } from "zustand";
 import type {
   Highlight,
   HighlightMedia,
+  HighlightComment,
   SectionMedia,
   MediaFile,
   FileReference,
+  Profile,
 } from "@/lib/supabase/types";
 
 interface AnnotationState {
@@ -16,6 +18,9 @@ interface AnnotationState {
   sectionMedia: SectionMedia[];
   mediaFiles: MediaFile[];
   fileReferences: FileReference[];
+  comments: HighlightComment[];
+  profiles: Record<string, Profile>;
+  currentUserId: string | null;
 
   // UI state
   selectedHighlightId: string | null;
@@ -40,6 +45,11 @@ interface AnnotationState {
   setFileReferences: (refs: FileReference[]) => void;
   addFileReference: (ref: FileReference) => void;
   removeFileReference: (id: string) => void;
+  setComments: (comments: HighlightComment[]) => void;
+  addComment: (comment: HighlightComment) => void;
+  removeComment: (id: string) => void;
+  setProfiles: (profiles: Record<string, Profile>) => void;
+  setCurrentUserId: (id: string | null) => void;
 
   // Actions: UI
   selectHighlight: (id: string | null, tab?: "media" | "upload" | "reference") => void;
@@ -69,6 +79,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   sectionMedia: [],
   mediaFiles: [],
   fileReferences: [],
+  comments: [],
+  profiles: {},
+  currentUserId: null,
 
   // UI state
   selectedHighlightId: null,
@@ -125,6 +138,14 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       highlightMedia: s.highlightMedia.filter((hm) => hm.file_reference_id !== id),
       sectionMedia: s.sectionMedia.filter((sm) => sm.file_reference_id !== id),
     })),
+
+  setComments: (comments) => set({ comments }),
+  addComment: (comment) =>
+    set((s) => ({ comments: [...s.comments, comment] })),
+  removeComment: (id) =>
+    set((s) => ({ comments: s.comments.filter((c) => c.id !== id) })),
+  setProfiles: (profiles) => set({ profiles }),
+  setCurrentUserId: (id) => set({ currentUserId: id }),
 
   // Actions: UI
   selectHighlight: (id, tab) =>

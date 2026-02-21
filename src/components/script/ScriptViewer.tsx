@@ -13,9 +13,11 @@ import type {
   Section,
   Highlight,
   HighlightMedia,
+  HighlightComment,
   SectionMedia,
   MediaFile,
   FileReference,
+  Profile,
   ProjectSettings,
 } from "@/lib/supabase/types";
 
@@ -28,7 +30,11 @@ interface ScriptViewerProps {
   initialSectionMedia?: SectionMedia[];
   initialMediaFiles?: MediaFile[];
   initialFileReferences?: FileReference[];
+  initialComments?: HighlightComment[];
+  profiles?: Record<string, Profile>;
+  currentUserId?: string;
   canEdit?: boolean;
+  canComment?: boolean;
 }
 
 export function ScriptViewer({
@@ -40,7 +46,11 @@ export function ScriptViewer({
   initialSectionMedia = [],
   initialMediaFiles = [],
   initialFileReferences = [],
+  initialComments = [],
+  profiles = {},
+  currentUserId,
   canEdit = false,
+  canComment = false,
 }: ScriptViewerProps) {
   const { selection, clearSelection } = useTextSelection();
   const [isPending, startTransition] = useTransition();
@@ -50,6 +60,9 @@ export function ScriptViewer({
   const setSectionMedia = useAnnotationStore((s) => s.setSectionMedia);
   const setMediaFiles = useAnnotationStore((s) => s.setMediaFiles);
   const setFileReferences = useAnnotationStore((s) => s.setFileReferences);
+  const setComments = useAnnotationStore((s) => s.setComments);
+  const setProfiles = useAnnotationStore((s) => s.setProfiles);
+  const setCurrentUserId = useAnnotationStore((s) => s.setCurrentUserId);
   const addHighlight = useAnnotationStore((s) => s.addHighlight);
   const selectHighlight = useAnnotationStore((s) => s.selectHighlight);
   const selectSectionForMedia = useAnnotationStore((s) => s.selectSectionForMedia);
@@ -62,6 +75,9 @@ export function ScriptViewer({
     setSectionMedia(initialSectionMedia);
     setMediaFiles(initialMediaFiles);
     setFileReferences(initialFileReferences);
+    setComments(initialComments);
+    setProfiles(profiles);
+    setCurrentUserId(currentUserId ?? null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -176,8 +192,8 @@ export function ScriptViewer({
         />
       )}
 
-      {/* Media sidebar (editors only) */}
-      {canEdit && <MediaSidebar projectId={projectId} />}
+      {/* Media sidebar (editors + commenters) */}
+      {(canEdit || canComment) && <MediaSidebar projectId={projectId} canEdit={canEdit} canComment={canComment} />}
 
       {/* Coverage type legend (editors only) */}
       {canEdit && <CoverageLegend projectId={projectId} coverageColors={settings?.coverageColors} />}

@@ -19,6 +19,35 @@ export async function requireProjectOwner(projectId: string) {
   return user;
 }
 
+/** Verify the current user is any member (viewer, editor, or owner). */
+export async function requireProjectMember(projectId: string) {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("owner_id")
+    .eq("id", projectId)
+    .single();
+
+  if (!project) throw new Error("Project not found");
+  if (project.owner_id === user.id) return user;
+
+  const email = user.email?.toLowerCase();
+  const { data: member } = await supabase
+    .from("project_members")
+    .select("role")
+    .eq("project_id", projectId)
+    .or(`user_id.eq.${user.id}${email ? `,invited_email.eq.${email}` : ""}`)
+    .single();
+
+  if (!member) {
+    throw new Error("Not a member of this project");
+  }
+
+  return user;
+}
+
 /** Verify the current user is the owner or an editor on a project. */
 export async function requireProjectEditor(projectId: string) {
   const user = await requireAuth();

@@ -23,12 +23,30 @@ function CallbackHandler() {
     // Clear the cookie
     document.cookie = "auth_redirect_to=; path=/; max-age=0";
 
+    async function checkProfileAndRedirect(userId: string) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .single();
+
+      if (!profile) {
+        window.location.href = "/setup";
+      } else {
+        window.location.href = redirectTo;
+      }
+    }
+
     async function handleAuth() {
       // PKCE flow: exchange code for session
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-          // Full page navigation so server components see the new session cookies
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await checkProfileAndRedirect(user.id);
+            return;
+          }
           window.location.href = redirectTo;
           return;
         }
@@ -39,7 +57,7 @@ function CallbackHandler() {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        window.location.href = redirectTo;
+        await checkProfileAndRedirect(session.user.id);
         return;
       }
 

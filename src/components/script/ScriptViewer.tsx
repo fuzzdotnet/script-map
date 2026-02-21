@@ -8,7 +8,7 @@ import { CoverageLegend } from "./CoverageLegend";
 import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
-import { createHighlight } from "@/actions/highlights";
+import { createHighlight, createHighlights } from "@/actions/highlights";
 import { toLineColor } from "@/lib/annotationEngine";
 import type {
   Section,
@@ -128,30 +128,30 @@ export function ScriptViewer({
     };
   }, [settings]);
 
-  function handleMedia() {
+  function handleCoverage(label: string, color: string, openUpload?: boolean) {
     if (!selection) return;
 
     startTransition(async () => {
       try {
         const groupId = selection.ranges.length > 1 ? crypto.randomUUID() : undefined;
-        const highlights = await Promise.all(
-          selection.ranges.map((range) =>
-            createHighlight({
-              sectionId: range.sectionId,
-              startOffset: range.startOffset,
-              endOffset: range.endOffset,
-              label: "media",
-              color: "var(--highlight-blue)",
-              groupId,
-            })
-          )
-        );
+
+        // Batch: single server call with 1 auth check + 1 insert query
+        const highlights = await createHighlights({
+          ranges: selection.ranges.map((r) => ({
+            sectionId: r.sectionId,
+            startOffset: r.startOffset,
+            endOffset: r.endOffset,
+          })),
+          label,
+          color,
+          groupId,
+        });
 
         for (const h of highlights) {
           addHighlight(h);
           markAsNew(h.id);
         }
-        if (highlights.length > 0) {
+        if (openUpload && highlights.length > 0) {
           selectHighlight(highlights[0].id, "upload");
         }
         clearSelection();
@@ -161,65 +161,9 @@ export function ScriptViewer({
     });
   }
 
-  function handleGraphics() {
-    if (!selection) return;
-
-    startTransition(async () => {
-      try {
-        const groupId = selection.ranges.length > 1 ? crypto.randomUUID() : undefined;
-        const highlights = await Promise.all(
-          selection.ranges.map((range) =>
-            createHighlight({
-              sectionId: range.sectionId,
-              startOffset: range.startOffset,
-              endOffset: range.endOffset,
-              label: "graphics",
-              color: "var(--highlight-green)",
-              groupId,
-            })
-          )
-        );
-
-        for (const h of highlights) {
-          addHighlight(h);
-          markAsNew(h.id);
-        }
-        clearSelection();
-      } catch (err) {
-        console.error("Failed to create highlight:", err);
-      }
-    });
-  }
-
-  function handleOnCamera() {
-    if (!selection) return;
-
-    startTransition(async () => {
-      try {
-        const groupId = selection.ranges.length > 1 ? crypto.randomUUID() : undefined;
-        const highlights = await Promise.all(
-          selection.ranges.map((range) =>
-            createHighlight({
-              sectionId: range.sectionId,
-              startOffset: range.startOffset,
-              endOffset: range.endOffset,
-              label: "on_camera",
-              color: "var(--highlight-amber)",
-              groupId,
-            })
-          )
-        );
-
-        for (const h of highlights) {
-          addHighlight(h);
-          markAsNew(h.id);
-        }
-        clearSelection();
-      } catch (err) {
-        console.error("Failed to create highlight:", err);
-      }
-    });
-  }
+  const handleMedia = () => handleCoverage("media", "var(--highlight-blue)", true);
+  const handleGraphics = () => handleCoverage("graphics", "var(--highlight-green)");
+  const handleOnCamera = () => handleCoverage("on_camera", "var(--highlight-amber)");
 
   return (
     <div className="flex flex-1 overflow-hidden">

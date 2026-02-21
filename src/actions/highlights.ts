@@ -19,11 +19,11 @@ async function getProjectIdForHighlight(highlightId: string): Promise<string> {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("highlights")
-    .select("section_id")
+    .select("sections!inner(project_id)")
     .eq("id", highlightId)
     .single();
   if (!data) throw new Error("Highlight not found");
-  return getProjectIdForSection(data.section_id);
+  return (data as unknown as { sections: { project_id: string } }).sections.project_id;
 }
 
 export async function createHighlight(params: {
@@ -59,20 +59,61 @@ export async function createHighlight(params: {
   return data;
 }
 
-export async function deleteHighlight(highlightId: string) {
-  const projectId = await getProjectIdForHighlight(highlightId);
-  await requireProjectEditor(projectId);
+/**
+ * Batch-create multiple highlights in a single server round-trip.
+ * Auth check happens once, then all rows are inserted in one query.
+ */
+export async function createHighlights(params: {
+  ranges: { sectionId: string; startOffset: number; endOffset: number }[];
+  label?: string;
+  color?: string;
+  collaboratorId?: string;
+  groupId?: string;
+}): Promise<Highlight[]> {
+  if (params.ranges.length === 0) return [];
+
+  // Auth check once using the first section
+  const projectId = await getProjectIdForSection(params.ranges[0].sectionId);
+  const user = await requireProjectEditor(projectId);
 
   const supabase = createServerClient();
 
-  // Check if this highlight belongs to a group — if so, delete all members
+  const rows = params.ranges.map((range) => ({
+    section_id: range.sectionId,
+    start_offset: range.startOffset,
+    end_offset: range.endOffset,
+    label: params.label || null,
+    color: params.color || null,
+    collaborator_id: params.collaboratorId || null,
+    created_by: user.id,
+    group_id: params.groupId || null,
+  }));
+
+  const { data, error } = await supabase
+    .from("highlights")
+    .insert(rows)
+    .select();
+
+  if (error) throw new Error(`Failed to create highlights: ${error.message}`);
+  return data;
+}
+
+export async function deleteHighlight(highlightId: string) {
+  const supabase = createServerClient();
+
+  // Single query: get group_id + project_id via join
   const { data: highlight } = await supabase
     .from("highlights")
-    .select("group_id")
+    .select("group_id, sections!inner(project_id)")
     .eq("id", highlightId)
     .single();
 
-  if (highlight?.group_id) {
+  if (!highlight) throw new Error("Highlight not found");
+
+  const projectId = (highlight as unknown as { sections: { project_id: string } }).sections.project_id;
+  await requireProjectEditor(projectId);
+
+  if (highlight.group_id) {
     const { error } = await supabase
       .from("highlights")
       .delete()

@@ -188,8 +188,8 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
                       onClick={handleDeleteHighlight}
                       disabled={isDeleting}
                     >
-                      <Trash2 className="h-4 w-4" />
-                      Remove highlight
+                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {isDeleting ? "Removing..." : "Remove highlight"}
                     </Button>
                   </div>
                 )}

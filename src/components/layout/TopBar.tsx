@@ -69,7 +69,7 @@ export function TopBar({
   const backHref = isMember || role === "owner" ? "/dashboard" : "/";
 
   return (
-    <header className="flex items-center justify-between border-b border-border px-6 py-3 bg-surface">
+    <header className="flex items-center justify-between border-b border-[oklch(0.22_0.06_290)] px-6 py-3 bg-gradient-to-r from-[oklch(0.14_0.07_295)] via-[oklch(0.13_0.05_280)] to-[oklch(0.11_0.03_265)]">
       <div className="flex items-center gap-4">
         <Link
           href={backHref}

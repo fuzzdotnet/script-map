@@ -13,9 +13,9 @@ export default function Home() {
       {/* Hero */}
       <section className="relative w-full max-w-2xl text-center pt-40 pb-28">
         {/* Ambient glow */}
-        <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 h-72 w-[32rem] rounded-full bg-blue-500/[0.06] blur-[120px]" />
+        <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 h-72 w-[32rem] rounded-full bg-purple-500/[0.08] blur-[120px]" />
 
-        <h1 className="relative text-6xl font-bold tracking-tight sm:text-8xl bg-gradient-to-b from-white via-white to-white/40 bg-clip-text text-transparent leading-none pb-2">
+        <h1 className="relative text-6xl font-bold tracking-tight sm:text-8xl bg-gradient-to-b from-white via-purple-200 to-purple-400/40 bg-clip-text text-transparent leading-none pb-2">
           Script Liner
         </h1>
         <p className="relative mt-6 text-xl text-muted-foreground">
@@ -77,7 +77,7 @@ function Feature({
   return (
     <div>
       <div className="flex items-center gap-3 mb-2">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted-foreground">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-300/70">
           {icon}
         </div>
         <h3 className="text-sm font-medium text-foreground/90">{title}</h3>

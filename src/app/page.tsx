@@ -1,31 +1,13 @@
 import Link from "next/link";
 import { FileText, Upload, Share2, Layers, Plus } from "lucide-react";
-import { getAuthUser } from "@/lib/supabase/auth";
+import { AuthNav } from "@/components/AuthNav";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  const user = await getAuthUser();
-
+export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center px-6">
       {/* Nav */}
       <nav className="w-full max-w-2xl flex items-center justify-end pt-6">
-        {user ? (
-          <Link
-            href="/dashboard"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Dashboard
-          </Link>
-        ) : (
-          <Link
-            href="/login"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Sign in
-          </Link>
-        )}
+        <AuthNav />
       </nav>
 
       {/* Hero */}
@@ -42,7 +24,7 @@ export default async function Home() {
 
         <div className="relative mt-12">
           <Link
-            href={user ? "/new" : "/login?redirectTo=/new"}
+            href="/login?redirectTo=/new"
             className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-all hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />

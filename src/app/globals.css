@@ -179,6 +179,22 @@
   font-size: 1.25rem;
   line-height: 1.9;
   letter-spacing: 0.01em;
+  user-select: text;
+}
+
+/* Prevent native selection from bleeding through gaps between sections */
+.script-sections {
+  user-select: none;
+}
+
+.script-sections ::selection {
+  background-color: transparent;
+}
+
+.script-text::selection,
+.script-text *::selection {
+  background-color: var(--highlight-blue);
+  color: var(--foreground);
 }
 
 /* Annotation highlights — editorial underline + subtle glow */

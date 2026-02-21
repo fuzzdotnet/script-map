@@ -176,10 +176,17 @@
 
 /* Script text typography */
 .script-text {
-  font-size: 1.25rem;
-  line-height: 1.9;
+  font-size: 1.1rem;
+  line-height: 1.8;
   letter-spacing: 0.01em;
   user-select: text;
+}
+
+@media (min-width: 768px) {
+  .script-text {
+    font-size: 1.25rem;
+    line-height: 1.9;
+  }
 }
 
 /* Prevent native selection from painting in gaps between sections */
@@ -243,6 +250,13 @@
   bottom: 0;
   width: 3px;
   pointer-events: none;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .margin-gutter {
+    display: block;
+  }
 }
 
 .margin-mark {

@@ -5,9 +5,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScriptSection } from "./ScriptSection";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CoverageLegend } from "./CoverageLegend";
+import { MobileBanner } from "./MobileBanner";
 import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { createHighlight, createHighlights } from "@/actions/highlights";
 import { toLineColor } from "@/lib/annotationEngine";
 import type {
@@ -53,6 +55,7 @@ export function ScriptViewer({
   canEdit = false,
   canComment = false,
 }: ScriptViewerProps) {
+  const isMobile = useIsMobile();
   const { selection, clearSelection } = useTextSelection();
   const [isPending, startTransition] = useTransition();
 
@@ -169,7 +172,7 @@ export function ScriptViewer({
     <div className="flex flex-1 overflow-hidden">
       {/* Script panel */}
       <ScrollArea className="flex-1">
-        <div className="mx-auto max-w-3xl px-8 py-12">
+        <div className="mx-auto max-w-3xl px-4 py-8 md:px-8 md:py-12">
           {sections.length === 0 ? (
             <div className="py-24 text-center text-muted-foreground">
               <p className="text-lg">No sections found.</p>
@@ -185,22 +188,29 @@ export function ScriptViewer({
         </div>
       </ScrollArea>
 
-      {/* Floating toolbar on text selection (editors only) */}
-      {canEdit && selection && !isPending && (
-        <FloatingToolbar
-          selection={selection}
-          onMedia={handleMedia}
-          onGraphics={handleGraphics}
-          onCamera={handleOnCamera}
-          onDismiss={clearSelection}
-        />
+      {!isMobile && (
+        <>
+          {/* Floating toolbar on text selection (editors only) */}
+          {canEdit && selection && !isPending && (
+            <FloatingToolbar
+              selection={selection}
+              onMedia={handleMedia}
+              onGraphics={handleGraphics}
+              onCamera={handleOnCamera}
+              onDismiss={clearSelection}
+            />
+          )}
+
+          {/* Media sidebar (editors + commenters) */}
+          {(canEdit || canComment) && <MediaSidebar projectId={projectId} canEdit={canEdit} canComment={canComment} />}
+
+          {/* Coverage type legend (editors only) */}
+          {canEdit && <CoverageLegend projectId={projectId} coverageColors={settings?.coverageColors} />}
+        </>
       )}
 
-      {/* Media sidebar (editors + commenters) */}
-      {(canEdit || canComment) && <MediaSidebar projectId={projectId} canEdit={canEdit} canComment={canComment} />}
-
-      {/* Coverage type legend (editors only) */}
-      {canEdit && <CoverageLegend projectId={projectId} coverageColors={settings?.coverageColors} />}
+      {/* Mobile: read-only banner */}
+      {isMobile && <MobileBanner />}
     </div>
   );
 }

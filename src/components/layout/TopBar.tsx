@@ -69,26 +69,26 @@ export function TopBar({
   const backHref = isMember || role === "owner" ? "/dashboard" : "/";
 
   return (
-    <header className="flex items-center justify-between border-b border-[oklch(0.22_0.06_290)] px-6 py-3 bg-gradient-to-r from-[oklch(0.14_0.07_295)] via-[oklch(0.13_0.05_280)] to-[oklch(0.11_0.03_265)]">
-      <div className="flex items-center gap-4">
+    <header className="flex items-center justify-between border-b border-[oklch(0.22_0.06_290)] px-3 py-2 md:px-6 md:py-3 bg-gradient-to-r from-[oklch(0.14_0.07_295)] via-[oklch(0.13_0.05_280)] to-[oklch(0.11_0.03_265)]">
+      <div className="flex items-center gap-2 md:gap-4 min-w-0">
         <Link
           href={backHref}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-lg font-semibold truncate max-w-md">
+        <h1 className="text-sm md:text-lg font-semibold truncate">
           {project.title}
         </h1>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 md:gap-2 shrink-0">
         {mediaFiles.length > 0 && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => setDownloadOpen(true)}
-            className="gap-2"
+            className="gap-2 hidden md:inline-flex"
           >
             <Download className="h-4 w-4" />
             Download Media
@@ -96,7 +96,7 @@ export function TopBar({
         )}
 
         {canEdit && (
-          <Link href={`/p/${project.share_token}/edit`}>
+          <Link href={`/p/${project.share_token}/edit`} className="hidden md:inline-flex">
             <Button variant="outline" size="sm" className="gap-2">
               <Pencil className="h-4 w-4" />
               Edit Script
@@ -109,7 +109,7 @@ export function TopBar({
             variant="outline"
             size="sm"
             onClick={() => setInviteOpen(true)}
-            className="gap-2"
+            className="gap-2 hidden md:inline-flex"
           >
             <UserPlus className="h-4 w-4" />
             Invite
@@ -125,7 +125,9 @@ export function TopBar({
             className="gap-2"
           >
             <BookmarkPlus className="h-4 w-4" />
-            {joined ? "Saved" : joining ? "Saving..." : "Save to Dashboard"}
+            <span className="hidden md:inline">
+              {joined ? "Saved" : joining ? "Saving..." : "Save to Dashboard"}
+            </span>
           </Button>
         )}
 
@@ -138,12 +140,12 @@ export function TopBar({
           {copied ? (
             <>
               <Check className="h-4 w-4" />
-              Copied
+              <span className="hidden md:inline">Copied</span>
             </>
           ) : (
             <>
               <Copy className="h-4 w-4" />
-              Share Link
+              <span className="hidden md:inline">Share Link</span>
             </>
           )}
         </Button>

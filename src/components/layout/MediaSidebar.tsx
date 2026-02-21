@@ -64,17 +64,8 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
   );
 
   const handleClose = useCallback(() => {
-    // If a media highlight is selected with no media, closeSidebar will remove it from client state.
-    // We also need to delete it from the database.
-    const hId = selectedHighlightId;
-    if (hId && isMediaType) {
-      const hasMedia = allHighlightMedia.some((hm) => hm.highlight_id === hId);
-      if (!hasMedia) {
-        deleteHighlight(hId).catch(() => {});
-      }
-    }
     closeSidebar();
-  }, [selectedHighlightId, isMediaType, allHighlightMedia, closeSidebar]);
+  }, [closeSidebar]);
 
   function handleDeleteHighlight() {
     if (!selectedHighlightId) return;

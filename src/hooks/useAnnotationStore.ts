@@ -200,47 +200,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({ selectedSectionId: id, selectedHighlightId: null, selectedGroupId: null, sidebarOpen: !!id, sidebarTab: "media" }),
   openSidebar: () => set({ sidebarOpen: true }),
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
-  closeSidebar: () => {
-    const state = get();
-    const hId = state.selectedHighlightId;
-
-    // If a media highlight is selected but has no media attached, it's orphaned — remove it
-    // Graphics and on_camera highlights are valid without media
-    if (hId) {
-      const highlight = state.highlights.find((h) => h.id === hId);
-      const isMediaType = !highlight?.label || highlight.label === "media";
-      if (isMediaType) {
-        const hasMedia = state.highlightMedia.some((hm) => hm.highlight_id === hId);
-        if (!hasMedia) {
-          const groupId = highlight?.group_id;
-          if (groupId) {
-            // Remove all group members from client state
-            const groupIds = new Set(
-              state.highlights.filter((h) => h.group_id === groupId).map((h) => h.id)
-            );
-            set((s) => ({
-              sidebarOpen: false,
-              selectedHighlightId: null,
-              selectedGroupId: null,
-              selectedSectionId: null,
-              highlights: s.highlights.filter((h) => !groupIds.has(h.id)),
-            }));
-          } else {
-            set((s) => ({
-              sidebarOpen: false,
-              selectedHighlightId: null,
-              selectedGroupId: null,
-              selectedSectionId: null,
-              highlights: s.highlights.filter((h) => h.id !== hId),
-            }));
-          }
-          return;
-        }
-      }
-    }
-
-    set({ sidebarOpen: false, selectedHighlightId: null, selectedGroupId: null, selectedSectionId: null });
-  },
+  closeSidebar: () =>
+    set({ sidebarOpen: false, selectedHighlightId: null, selectedGroupId: null, selectedSectionId: null }),
 
   // Derived helpers
   getHighlightsForSection: (sectionId) =>

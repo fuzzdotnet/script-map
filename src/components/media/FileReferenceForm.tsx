@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import {
@@ -28,7 +27,6 @@ export function FileReferenceForm({
 }: FileReferenceFormProps) {
   const [filename, setFilename] = useState("");
   const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
   const [fileType, setFileType] = useState("video");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +50,7 @@ export function FileReferenceForm({
           projectId,
           filename: filename.trim(),
           location: location.trim() || undefined,
-          description: description.trim() || undefined,
+          description: undefined,
           fileType,
         });
 
@@ -76,7 +74,6 @@ export function FileReferenceForm({
         // Reset form
         setFilename("");
         setLocation("");
-        setDescription("");
         onComplete();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to create reference.");
@@ -130,17 +127,6 @@ export function FileReferenceForm({
           <option value="audio">Audio</option>
           <option value="other">Other</option>
         </select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="ref-description">Description</Label>
-        <Textarea
-          id="ref-description"
-          placeholder="Optional context — why this file fits here..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="min-h-[80px] resize-y"
-        />
       </div>
 
       {error && (

@@ -6,6 +6,7 @@ import { ScriptSection } from "./ScriptSection";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CoverageLegend } from "./CoverageLegend";
 import { MobileBanner } from "./MobileBanner";
+import { MobileFilmedPopover } from "./MobileFilmedPopover";
 import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
@@ -217,8 +218,13 @@ export function ScriptViewer({
         </>
       )}
 
-      {/* Mobile: read-only banner */}
-      {isMobile && <MobileBanner />}
+      {/* Mobile: filmed popover + informational banner */}
+      {isMobile && (
+        <>
+          {canEdit && <MobileFilmedPopover />}
+          <MobileBanner />
+        </>
+      )}
     </div>
   );
 }

@@ -242,6 +242,19 @@
   animation: highlight-pulse 0.5s ease-out;
 }
 
+/* Filmed highlights — dimmed to show "done" status */
+.annotation-highlight.filmed {
+  filter: saturate(0.3) brightness(0.85);
+  text-decoration-color: color-mix(in oklch, var(--span-line, transparent) 25%, transparent);
+  opacity: 0.55;
+}
+
+.annotation-highlight.filmed:hover {
+  filter: saturate(0.5) brightness(0.95);
+  opacity: 0.7;
+  box-shadow: none;
+}
+
 /* Margin coverage indicators */
 .margin-gutter {
   position: absolute;

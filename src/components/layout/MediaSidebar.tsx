@@ -8,7 +8,8 @@ import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { MediaUploader } from "@/components/media/MediaUploader";
 import { FileReferenceForm } from "@/components/media/FileReferenceForm";
 import { MediaGrid } from "@/components/media/MediaGrid";
-import { deleteHighlight, updateHighlightNote } from "@/actions/highlights";
+import { Check, Circle } from "lucide-react";
+import { deleteHighlight, updateHighlightNote, toggleHighlightFilmed } from "@/actions/highlights";
 import { addComment, deleteComment } from "@/actions/comments";
 import { getCoverageType, COVERAGE_TYPES } from "@/lib/annotationEngine";
 import type { MediaFile, FileReference } from "@/lib/supabase/types";
@@ -157,6 +158,16 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
                   )}
                 </div>
 
+                {/* Filmed toggle */}
+                {canEdit && (
+                  <div className="px-4 pb-3">
+                    <FilmedToggle
+                      highlightId={selectedHighlightId}
+                      filmed={selectedHighlight?.filmed ?? false}
+                    />
+                  </div>
+                )}
+
                 {/* Editable note */}
                 {canEdit && (
                   <div className="px-4 pb-4">
@@ -203,6 +214,16 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
                 {selectedHighlightId && creatorName && (
                   <div className="px-4 py-2 text-xs text-muted-foreground border-b border-border">
                     <span className="font-medium text-foreground/70">{creatorName}</span> added this media highlight
+                  </div>
+                )}
+
+                {/* Filmed toggle */}
+                {canEdit && selectedHighlightId && (
+                  <div className="px-4 py-3 border-b border-border">
+                    <FilmedToggle
+                      highlightId={selectedHighlightId}
+                      filmed={selectedHighlight?.filmed ?? false}
+                    />
                   </div>
                 )}
 
@@ -621,6 +642,39 @@ function TabButton({
     >
       {icon}
       {label}
+    </button>
+  );
+}
+
+function FilmedToggle({ highlightId, filmed }: { highlightId: string; filmed: boolean }) {
+  const [isPending, startTransition] = useTransition();
+  const setHighlightFilmed = useAnnotationStore((s) => s.setHighlightFilmed);
+
+  function handleToggle() {
+    const newValue = !filmed;
+    setHighlightFilmed(highlightId, newValue);
+    startTransition(async () => {
+      try {
+        await toggleHighlightFilmed(highlightId, newValue);
+      } catch (err) {
+        console.error("Failed to toggle filmed:", err);
+        setHighlightFilmed(highlightId, filmed);
+      }
+    });
+  }
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={isPending}
+      className={`w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
+        filmed
+          ? "border-green-500/30 bg-green-500/10 text-green-400"
+          : "border-border bg-elevated text-muted-foreground hover:text-foreground hover:border-foreground/30"
+      }`}
+    >
+      {filmed ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+      {filmed ? "Filmed" : "Mark as filmed"}
     </button>
   );
 }

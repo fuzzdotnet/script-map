@@ -116,16 +116,20 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
           const isNew = newHighlightIds && span.highlightIds.some(
             (id) => newHighlightIds.has(id)
           );
+          const isFilmed = span.highlightIds.every(
+            (id) => highlights.find((h) => h.id === id)?.filmed
+          );
 
           return (
             <span
               key={i}
-              className={`annotation-highlight ${isSelected ? "ring-1 ring-ring" : ""} ${isPulsing ? "highlight-selected" : ""}`}
+              className={`annotation-highlight ${isFilmed ? "filmed" : ""} ${isSelected ? "ring-1 ring-ring" : ""} ${isPulsing ? "highlight-selected" : ""}`}
               style={{
                 backgroundColor: getSpanColor(span.highlightIds, highlights),
                 "--span-line": getSpanLineColor(span.highlightIds, highlights),
               } as React.CSSProperties}
               data-new={isNew ? "" : undefined}
+              data-filmed={isFilmed ? "" : undefined}
               onClick={() => selectHighlight(span.highlightIds[0])}
             >
               {span.text}
@@ -157,7 +161,7 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
  */
 function MarginGutter({ highlights, sectionBody }: { highlights: Highlight[]; sectionBody: string }) {
   const gutterRef = useRef<HTMLDivElement>(null);
-  const [marks, setMarks] = useState<{ top: number; height: number; color: string }[]>([]);
+  const [marks, setMarks] = useState<{ top: number; height: number; color: string; filmed: boolean }[]>([]);
 
   const computeMarks = useCallback(() => {
     const gutter = gutterRef.current;
@@ -173,7 +177,7 @@ function MarginGutter({ highlights, sectionBody }: { highlights: Highlight[]; se
     const spans = paragraph.querySelectorAll(".annotation-highlight");
 
     // Group spans by visual line (same Y position within 2px tolerance)
-    const lineMap = new Map<number, string>();
+    const lineMap = new Map<number, { color: string; filmed: boolean }>();
 
     spans.forEach((el) => {
       const rect = el.getBoundingClientRect();
@@ -185,13 +189,14 @@ function MarginGutter({ highlights, sectionBody }: { highlights: Highlight[]; se
 
       if (!lineMap.has(lineKey)) {
         const lineColor = (el as HTMLElement).style.getPropertyValue("--span-line");
-        lineMap.set(lineKey, lineColor);
+        const isFilmed = el.hasAttribute("data-filmed");
+        lineMap.set(lineKey, { color: lineColor, filmed: isFilmed });
       }
     });
 
-    const newMarks: { top: number; height: number; color: string }[] = [];
-    lineMap.forEach((color, top) => {
-      newMarks.push({ top, height: 3, color });
+    const newMarks: { top: number; height: number; color: string; filmed: boolean }[] = [];
+    lineMap.forEach(({ color, filmed }, top) => {
+      newMarks.push({ top, height: 3, color, filmed });
     });
 
     setMarks(newMarks);
@@ -213,6 +218,7 @@ function MarginGutter({ highlights, sectionBody }: { highlights: Highlight[]; se
             top: mark.top,
             height: mark.height,
             backgroundColor: mark.color,
+            opacity: mark.filmed ? 0.25 : 1,
           }}
         />
       ))}

@@ -34,6 +34,7 @@ interface AnnotationState {
   addHighlight: (highlight: Highlight) => void;
   removeHighlight: (id: string) => void;
   updateHighlightNote: (id: string, note: string | null) => void;
+  setHighlightFilmed: (id: string, filmed: boolean) => void;
   setHighlightMedia: (media: HighlightMedia[]) => void;
   addHighlightMedia: (media: HighlightMedia) => void;
   removeHighlightMedia: (id: string) => void;
@@ -125,6 +126,25 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         h.id === id ? { ...h, note } : h
       ),
     })),
+  setHighlightFilmed: (id, filmed) => {
+    const state = get();
+    const highlight = state.highlights.find((h) => h.id === id);
+    const groupId = highlight?.group_id;
+
+    if (groupId) {
+      set((s) => ({
+        highlights: s.highlights.map((h) =>
+          h.group_id === groupId ? { ...h, filmed } : h
+        ),
+      }));
+    } else {
+      set((s) => ({
+        highlights: s.highlights.map((h) =>
+          h.id === id ? { ...h, filmed } : h
+        ),
+      }));
+    }
+  },
 
   setHighlightMedia: (media) => set({ highlightMedia: media }),
   addHighlightMedia: (media) =>

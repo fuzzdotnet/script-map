@@ -142,6 +142,35 @@ export async function updateHighlightNote(highlightId: string, note: string | nu
   if (error) throw new Error(`Failed to update highlight note: ${error.message}`);
 }
 
+export async function toggleHighlightFilmed(highlightId: string, filmed: boolean) {
+  const supabase = createServerClient();
+
+  const { data: highlight } = await supabase
+    .from("highlights")
+    .select("group_id, sections!inner(project_id)")
+    .eq("id", highlightId)
+    .single();
+
+  if (!highlight) throw new Error("Highlight not found");
+
+  const projectId = (highlight as unknown as { sections: { project_id: string } }).sections.project_id;
+  await requireProjectEditor(projectId);
+
+  if (highlight.group_id) {
+    const { error } = await supabase
+      .from("highlights")
+      .update({ filmed })
+      .eq("group_id", highlight.group_id);
+    if (error) throw new Error(`Failed to update highlight group: ${error.message}`);
+  } else {
+    const { error } = await supabase
+      .from("highlights")
+      .update({ filmed })
+      .eq("id", highlightId);
+    if (error) throw new Error(`Failed to update highlight: ${error.message}`);
+  }
+}
+
 export async function getHighlightsForProject(projectId: string): Promise<Highlight[]> {
   const supabase = createServerClient();
 

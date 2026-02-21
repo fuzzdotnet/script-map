@@ -60,6 +60,7 @@ CREATE TABLE highlights (
   color TEXT,
   note TEXT,
   group_id UUID,
+  filmed BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT valid_range CHECK (end_offset > start_offset)

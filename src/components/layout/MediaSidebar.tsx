@@ -305,6 +305,21 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
                       />
                     </div>
                   )}
+
+                  {/* Delete button for media highlights */}
+                  {canEdit && selectedHighlightId && (
+                    <div className="px-4 pb-6 text-center border-t border-border pt-4">
+                      <Button
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive gap-2"
+                        onClick={handleDeleteHighlight}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove highlight
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             )}

@@ -70,13 +70,13 @@ export async function inviteMember(
 
   if (project) {
     try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://parkvibes.media";
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://scriptliner.com";
       await sendInviteEmail({
         to: normalizedEmail,
         projectTitle: project.title,
         role,
         shareUrl: `${origin}/p/${project.share_token}`,
-        inviterEmail: user.email || "A Script Map user",
+        inviterEmail: user.email || "A Script Liner user",
       });
     } catch (err) {
       emailError = err instanceof Error ? err.message : "Failed to send invite email";

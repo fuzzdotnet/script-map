@@ -17,7 +17,7 @@ export async function sendInviteEmail(params: {
 }) {
   const resend = getResend();
   await resend.emails.send({
-    from: "Script Map <noreply@parkvibes.media>",
+    from: "Script Liner <noreply@scriptliner.com>",
     to: params.to,
     subject: `You've been invited to "${params.projectTitle}"`,
     html: `
@@ -31,7 +31,7 @@ export async function sendInviteEmail(params: {
           Open Project
         </a>
         <p style="margin-top: 32px; font-size: 12px; color: #999;">
-          Script Map — Media annotations for documentary scripts
+          Script Liner — Media annotations for documentary scripts
         </p>
       </div>
     `,

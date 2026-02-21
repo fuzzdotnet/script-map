@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Script Map",
+  title: "Script Liner",
   description: "Attach media to your documentary scripts. Highlight words, attach photos and videos, and share with your editors.",
 };
 

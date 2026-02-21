@@ -16,7 +16,7 @@ export default function Home() {
         <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 h-72 w-[32rem] rounded-full bg-blue-500/[0.06] blur-[120px]" />
 
         <h1 className="relative text-6xl font-bold tracking-tight sm:text-8xl bg-gradient-to-b from-white via-white to-white/40 bg-clip-text text-transparent leading-none pb-2">
-          Script Map
+          Script Liner
         </h1>
         <p className="relative mt-6 text-xl text-muted-foreground">
           Media annotations for documentary scripts.
@@ -59,7 +59,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="mt-auto py-12 text-center text-xs text-muted-foreground/25">
-        Script Map
+        Script Liner
       </footer>
     </div>
   );

@@ -181,6 +181,17 @@
   letter-spacing: 0.01em;
 }
 
+/* Prevent native selection from painting in gaps between sections */
+.script-sections ::selection {
+  background-color: transparent;
+}
+
+.script-text::selection,
+.script-text *::selection {
+  background-color: var(--highlight-blue);
+  color: var(--foreground);
+}
+
 /* Annotation highlights — editorial underline + subtle glow */
 .annotation-highlight {
   transition: background-color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;

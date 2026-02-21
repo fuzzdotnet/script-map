@@ -45,6 +45,7 @@ export interface Highlight {
   label: string | null;
   color: string | null;
   note: string | null;
+  group_id: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -33,6 +33,7 @@ export async function createHighlight(params: {
   label?: string;
   color?: string;
   collaboratorId?: string;
+  groupId?: string;
 }): Promise<Highlight> {
   const projectId = await getProjectIdForSection(params.sectionId);
   const user = await requireProjectEditor(projectId);
@@ -49,6 +50,7 @@ export async function createHighlight(params: {
       color: params.color || null,
       collaborator_id: params.collaboratorId || null,
       created_by: user.id,
+      group_id: params.groupId || null,
     })
     .select()
     .single();
@@ -63,12 +65,26 @@ export async function deleteHighlight(highlightId: string) {
 
   const supabase = createServerClient();
 
-  const { error } = await supabase
+  // Check if this highlight belongs to a group — if so, delete all members
+  const { data: highlight } = await supabase
     .from("highlights")
-    .delete()
-    .eq("id", highlightId);
+    .select("group_id")
+    .eq("id", highlightId)
+    .single();
 
-  if (error) throw new Error(`Failed to delete highlight: ${error.message}`);
+  if (highlight?.group_id) {
+    const { error } = await supabase
+      .from("highlights")
+      .delete()
+      .eq("group_id", highlight.group_id);
+    if (error) throw new Error(`Failed to delete highlight group: ${error.message}`);
+  } else {
+    const { error } = await supabase
+      .from("highlights")
+      .delete()
+      .eq("id", highlightId);
+    if (error) throw new Error(`Failed to delete highlight: ${error.message}`);
+  }
 }
 
 export async function updateHighlightNote(highlightId: string, note: string | null) {

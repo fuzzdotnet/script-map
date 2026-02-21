@@ -133,6 +133,7 @@ export function ScriptViewer({
 
     startTransition(async () => {
       try {
+        const groupId = selection.ranges.length > 1 ? crypto.randomUUID() : undefined;
         const highlights = await Promise.all(
           selection.ranges.map((range) =>
             createHighlight({
@@ -141,6 +142,7 @@ export function ScriptViewer({
               endOffset: range.endOffset,
               label: "media",
               color: "var(--highlight-blue)",
+              groupId,
             })
           )
         );
@@ -164,6 +166,7 @@ export function ScriptViewer({
 
     startTransition(async () => {
       try {
+        const groupId = selection.ranges.length > 1 ? crypto.randomUUID() : undefined;
         const highlights = await Promise.all(
           selection.ranges.map((range) =>
             createHighlight({
@@ -172,6 +175,7 @@ export function ScriptViewer({
               endOffset: range.endOffset,
               label: "graphics",
               color: "var(--highlight-green)",
+              groupId,
             })
           )
         );
@@ -192,6 +196,7 @@ export function ScriptViewer({
 
     startTransition(async () => {
       try {
+        const groupId = selection.ranges.length > 1 ? crypto.randomUUID() : undefined;
         const highlights = await Promise.all(
           selection.ranges.map((range) =>
             createHighlight({
@@ -200,6 +205,7 @@ export function ScriptViewer({
               endOffset: range.endOffset,
               label: "on_camera",
               color: "var(--highlight-amber)",
+              groupId,
             })
           )
         );
@@ -226,7 +232,7 @@ export function ScriptViewer({
               <p className="mt-2 text-sm">This script appears to be empty.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="script-sections space-y-6">
               {sections.map((section) => (
                 <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} />
               ))}

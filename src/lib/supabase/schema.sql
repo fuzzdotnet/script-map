@@ -59,6 +59,7 @@ CREATE TABLE highlights (
   label TEXT,
   color TEXT,
   note TEXT,
+  group_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT valid_range CHECK (end_offset > start_offset)

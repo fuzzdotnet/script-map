@@ -19,6 +19,7 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
   const selectHighlight = useAnnotationStore((s) => s.selectHighlight);
   const selectSectionForMedia = useAnnotationStore((s) => s.selectSectionForMedia);
   const selectedHighlightId = useAnnotationStore((s) => s.selectedHighlightId);
+  const selectedGroupId = useAnnotationStore((s) => s.selectedGroupId);
 
   // Derive filtered data in useMemo (avoids infinite loop)
   const highlights = useMemo(
@@ -99,14 +100,15 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
         <MarginGutter highlights={highlights} sectionBody={section.body} />
       )}
 
-      <p className="script-text text-foreground/90 selection:bg-highlight-blue selection:text-foreground" data-section-text>
+      <p className="script-text text-foreground/90" data-section-text>
         {spans.map((span, i) => {
           if (span.highlightIds.length === 0) {
             return <span key={i}>{span.text}</span>;
           }
 
           const isSelected = span.highlightIds.some(
-            (id) => id === selectedHighlightId
+            (id) => id === selectedHighlightId ||
+              (selectedGroupId && highlights.find((h) => h.id === id)?.group_id === selectedGroupId)
           );
           const isPulsing = span.highlightIds.some(
             (id) => id === pulsingId

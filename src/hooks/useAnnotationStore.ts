@@ -24,6 +24,7 @@ interface AnnotationState {
 
   // UI state
   selectedHighlightId: string | null;
+  selectedGroupId: string | null;
   selectedSectionId: string | null;
   sidebarOpen: boolean;
   sidebarTab: "media" | "upload" | "reference";
@@ -85,6 +86,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   // UI state
   selectedHighlightId: null,
+  selectedGroupId: null,
   selectedSectionId: null,
   sidebarOpen: false,
   sidebarTab: "media",
@@ -93,13 +95,30 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setHighlights: (highlights) => set({ highlights }),
   addHighlight: (highlight) =>
     set((s) => ({ highlights: [...s.highlights, highlight] })),
-  removeHighlight: (id) =>
-    set((s) => ({
-      highlights: s.highlights.filter((h) => h.id !== id),
-      highlightMedia: s.highlightMedia.filter((hm) => hm.highlight_id !== id),
-      selectedHighlightId:
-        s.selectedHighlightId === id ? null : s.selectedHighlightId,
-    })),
+  removeHighlight: (id) => {
+    const state = get();
+    const highlight = state.highlights.find((h) => h.id === id);
+    const groupId = highlight?.group_id;
+
+    if (groupId) {
+      // Remove all highlights in the group
+      const groupIds = new Set(
+        state.highlights.filter((h) => h.group_id === groupId).map((h) => h.id)
+      );
+      set((s) => ({
+        highlights: s.highlights.filter((h) => !groupIds.has(h.id)),
+        highlightMedia: s.highlightMedia.filter((hm) => !groupIds.has(hm.highlight_id)),
+        selectedHighlightId: groupIds.has(s.selectedHighlightId ?? "") ? null : s.selectedHighlightId,
+        selectedGroupId: s.selectedGroupId === groupId ? null : s.selectedGroupId,
+      }));
+    } else {
+      set((s) => ({
+        highlights: s.highlights.filter((h) => h.id !== id),
+        highlightMedia: s.highlightMedia.filter((hm) => hm.highlight_id !== id),
+        selectedHighlightId: s.selectedHighlightId === id ? null : s.selectedHighlightId,
+      }));
+    }
+  },
   updateHighlightNote: (id, note) =>
     set((s) => ({
       highlights: s.highlights.map((h) =>
@@ -148,10 +167,37 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setCurrentUserId: (id) => set({ currentUserId: id }),
 
   // Actions: UI
-  selectHighlight: (id, tab) =>
-    set({ selectedHighlightId: id, selectedSectionId: null, sidebarOpen: !!id, sidebarTab: tab ?? "media" }),
+  selectHighlight: (id, tab) => {
+    if (!id) {
+      set({ selectedHighlightId: null, selectedGroupId: null, selectedSectionId: null, sidebarOpen: false, sidebarTab: tab ?? "media" });
+      return;
+    }
+
+    const state = get();
+    const highlight = state.highlights.find((h) => h.id === id);
+    const groupId = highlight?.group_id ?? null;
+
+    // If this highlight is part of a group, select the primary (earliest created)
+    let primaryId = id;
+    if (groupId) {
+      const groupMembers = state.highlights
+        .filter((h) => h.group_id === groupId)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      if (groupMembers.length > 0) {
+        primaryId = groupMembers[0].id;
+      }
+    }
+
+    set({
+      selectedHighlightId: primaryId,
+      selectedGroupId: groupId,
+      selectedSectionId: null,
+      sidebarOpen: true,
+      sidebarTab: tab ?? "media",
+    });
+  },
   selectSectionForMedia: (id) =>
-    set({ selectedSectionId: id, selectedHighlightId: null, sidebarOpen: !!id, sidebarTab: "media" }),
+    set({ selectedSectionId: id, selectedHighlightId: null, selectedGroupId: null, sidebarOpen: !!id, sidebarTab: "media" }),
   openSidebar: () => set({ sidebarOpen: true }),
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
   closeSidebar: () => {
@@ -166,18 +212,34 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       if (isMediaType) {
         const hasMedia = state.highlightMedia.some((hm) => hm.highlight_id === hId);
         if (!hasMedia) {
-          set((s) => ({
-            sidebarOpen: false,
-            selectedHighlightId: null,
-            selectedSectionId: null,
-            highlights: s.highlights.filter((h) => h.id !== hId),
-          }));
+          const groupId = highlight?.group_id;
+          if (groupId) {
+            // Remove all group members from client state
+            const groupIds = new Set(
+              state.highlights.filter((h) => h.group_id === groupId).map((h) => h.id)
+            );
+            set((s) => ({
+              sidebarOpen: false,
+              selectedHighlightId: null,
+              selectedGroupId: null,
+              selectedSectionId: null,
+              highlights: s.highlights.filter((h) => !groupIds.has(h.id)),
+            }));
+          } else {
+            set((s) => ({
+              sidebarOpen: false,
+              selectedHighlightId: null,
+              selectedGroupId: null,
+              selectedSectionId: null,
+              highlights: s.highlights.filter((h) => h.id !== hId),
+            }));
+          }
           return;
         }
       }
     }
 
-    set({ sidebarOpen: false, selectedHighlightId: null, selectedSectionId: null });
+    set({ sidebarOpen: false, selectedHighlightId: null, selectedGroupId: null, selectedSectionId: null });
   },
 
   // Derived helpers

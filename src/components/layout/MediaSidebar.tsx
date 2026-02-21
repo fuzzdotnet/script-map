@@ -215,14 +215,12 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
                       icon={<ImagePlus className="h-3.5 w-3.5" />}
                       label={`Media${totalMedia > 0 ? ` (${totalMedia})` : ""}`}
                     />
-                    {coverageType !== "field_footage" && (
-                      <TabButton
-                        active={activeTab === "upload"}
-                        onClick={() => setActiveTab("upload")}
-                        icon={<Upload className="h-3.5 w-3.5" />}
-                        label="Upload"
-                      />
-                    )}
+                    <TabButton
+                      active={activeTab === "upload"}
+                      onClick={() => setActiveTab("upload")}
+                      icon={<Upload className="h-3.5 w-3.5" />}
+                      label="Upload"
+                    />
                     <TabButton
                       active={activeTab === "reference"}
                       onClick={() => setActiveTab("reference")}

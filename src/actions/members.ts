@@ -2,7 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
-import { requireProjectOwner } from "@/lib/auth-helpers";
+import { requireProjectOwner, requireProjectMember } from "@/lib/auth-helpers";
 import { sendInviteEmail } from "@/lib/email";
 import type { ProjectMember } from "@/lib/supabase/types";
 
@@ -110,6 +110,7 @@ export async function removeMember(memberId: string) {
 }
 
 export async function listMembers(projectId: string): Promise<ProjectMember[]> {
+  await requireProjectMember(projectId);
   const supabase = createServerClient();
 
   const { data, error } = await supabase

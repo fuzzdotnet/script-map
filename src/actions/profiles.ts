@@ -14,6 +14,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data;
 }
 
+/** Fetch multiple profiles by ID. Returns only public fields (id, display_name). */
 export async function getProfiles(
   userIds: string[]
 ): Promise<Record<string, Profile>> {
@@ -22,13 +23,13 @@ export async function getProfiles(
   const supabase = createServerClient();
   const { data } = await supabase
     .from("profiles")
-    .select()
+    .select("id, display_name")
     .in("id", userIds);
 
   const map: Record<string, Profile> = {};
   if (data) {
     for (const profile of data) {
-      map[profile.id] = profile;
+      map[profile.id] = profile as Profile;
     }
   }
   return map;

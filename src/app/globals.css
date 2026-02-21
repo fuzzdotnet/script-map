@@ -179,14 +179,9 @@
   font-size: 1.25rem;
   line-height: 1.9;
   letter-spacing: 0.01em;
-  user-select: text;
 }
 
-/* Prevent native selection from bleeding through gaps between sections */
-.script-sections {
-  user-select: none;
-}
-
+/* Reduce visual bleed of native selection in gaps between sections */
 .script-sections ::selection {
   background-color: transparent;
 }

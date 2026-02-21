@@ -3,11 +3,7 @@ import { Plus, Settings } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ProjectList } from "@/components/ProjectList";
 import { SignOutButton } from "@/components/SignOutButton";
-import {
-  listProjects,
-  getProjectSectionCount,
-  getProjectHighlightCount,
-} from "@/actions/projects";
+import { listProjects, getProjectStats } from "@/actions/projects";
 import { claimPendingInvites } from "@/actions/members";
 import { getProfile } from "@/actions/profiles";
 import { getAuthUser } from "@/lib/supabase/auth";
@@ -19,41 +15,25 @@ export default async function DashboardPage() {
   const user = await getAuthUser();
   if (!user) redirect("/login");
 
-  const profile = await getProfile(user.id);
+  // Run profile fetch, invite claim, and project list in parallel
+  const [profile, , projects] = await Promise.all([
+    getProfile(user.id),
+    user.email
+      ? claimPendingInvites(user.id, user.email).catch(() => {})
+      : Promise.resolve(),
+    listProjects().catch(() => [] as Awaited<ReturnType<typeof listProjects>>),
+  ]);
 
-  // Claim any pending invites for this user
-  if (user.email) {
-    try {
-      await claimPendingInvites(user.id, user.email);
-    } catch {
-      // non-critical
-    }
-  }
+  // Single batch query for all project stats (2 queries instead of 2×N)
+  const stats = projects.length > 0
+    ? await getProjectStats(projects.map((p) => p.id))
+    : {};
 
-  let projectsWithStats: {
-    id: string;
-    title: string;
-    share_token: string;
-    owner_id: string | null;
-    created_at: string;
-    updated_at: string;
-    role: ProjectRole;
-    sectionCount: number;
-    highlightCount: number;
-  }[] = [];
-
-  try {
-    const projects = await listProjects();
-    projectsWithStats = await Promise.all(
-      projects.map(async (p) => ({
-        ...p,
-        sectionCount: await getProjectSectionCount(p.id),
-        highlightCount: await getProjectHighlightCount(p.id),
-      }))
-    );
-  } catch {
-    // Supabase may not be configured yet
-  }
+  const projectsWithStats = projects.map((p) => ({
+    ...p,
+    sectionCount: stats[p.id]?.sectionCount ?? 0,
+    highlightCount: stats[p.id]?.highlightCount ?? 0,
+  }));
 
   return (
     <div className="flex min-h-screen flex-col items-center px-6">

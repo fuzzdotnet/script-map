@@ -166,6 +166,49 @@ export async function getProjectHighlightCount(projectId: string): Promise<numbe
   return count ?? 0;
 }
 
+/**
+ * Batch-fetch section and highlight counts for multiple projects in 2 queries
+ * instead of 2×N.
+ */
+export async function getProjectStats(
+  projectIds: string[]
+): Promise<Record<string, { sectionCount: number; highlightCount: number }>> {
+  if (projectIds.length === 0) return {};
+
+  const supabase = createServerClient();
+
+  const [sectionsResult, highlightsResult] = await Promise.all([
+    supabase
+      .from("sections")
+      .select("project_id")
+      .in("project_id", projectIds),
+    supabase
+      .from("highlights")
+      .select("sections!inner(project_id)")
+      .in("sections.project_id", projectIds),
+  ]);
+
+  const stats: Record<string, { sectionCount: number; highlightCount: number }> = {};
+  for (const id of projectIds) {
+    stats[id] = { sectionCount: 0, highlightCount: 0 };
+  }
+
+  if (sectionsResult.data) {
+    for (const row of sectionsResult.data) {
+      stats[row.project_id].sectionCount++;
+    }
+  }
+
+  if (highlightsResult.data) {
+    for (const row of highlightsResult.data) {
+      const pid = (row as unknown as { sections: { project_id: string } }).sections.project_id;
+      if (stats[pid]) stats[pid].highlightCount++;
+    }
+  }
+
+  return stats;
+}
+
 export async function replaceProjectScript(projectId: string, scriptText: string) {
   await requireProjectEditor(projectId);
   const supabase = createServerClient();

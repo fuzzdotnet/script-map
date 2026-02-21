@@ -5,7 +5,14 @@ import { createServerClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import { requireProjectOwner, requireProjectEditor } from "@/lib/auth-helpers";
 import { parseScriptText } from "@/lib/sectionParser";
-import type { Project } from "@/lib/supabase/types";
+import type {
+  Project,
+  Section,
+  Highlight,
+  HighlightMedia,
+  SectionMedia,
+  HighlightComment,
+} from "@/lib/supabase/types";
 
 export type ProjectRole = "owner" | "editor" | "viewer";
 
@@ -73,6 +80,65 @@ export async function getProjectSections(projectId: string) {
 
   if (error) throw new Error(`Failed to fetch sections: ${error.message}`);
   return data;
+}
+
+/**
+ * Fetch all project page data in a single Supabase query using nested selects.
+ * Replaces 5 separate round-trips (sections, highlights, highlight_media,
+ * section_media, comments) with 1.
+ */
+export async function getProjectPageData(projectId: string): Promise<{
+  sections: Section[];
+  highlights: Highlight[];
+  highlightMedia: HighlightMedia[];
+  sectionMedia: SectionMedia[];
+  comments: HighlightComment[];
+}> {
+  const supabase = createServerClient();
+
+  const { data, error } = await supabase
+    .from("sections")
+    .select(`
+      *,
+      highlights(
+        *,
+        highlight_media(*),
+        highlight_comments(*)
+      ),
+      section_media(*)
+    `)
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true });
+
+  if (error) throw new Error(`Failed to fetch project data: ${error.message}`);
+
+  const sections: Section[] = [];
+  const highlights: Highlight[] = [];
+  const highlightMedia: HighlightMedia[] = [];
+  const sectionMedia: SectionMedia[] = [];
+  const comments: HighlightComment[] = [];
+
+  for (const row of data) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { highlights: hlRows, section_media: smRows, ...section } = row as any;
+    sections.push(section);
+
+    if (hlRows) {
+      for (const hlRow of hlRows) {
+        const { highlight_media: hmRows, highlight_comments: hcRows, ...highlight } = hlRow;
+        highlights.push(highlight);
+        if (hmRows) highlightMedia.push(...hmRows);
+        if (hcRows) comments.push(...hcRows);
+      }
+    }
+
+    if (smRows) sectionMedia.push(...smRows);
+  }
+
+  // Nested queries don't guarantee order
+  comments.sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+  return { sections, highlights, highlightMedia, sectionMedia, comments };
 }
 
 export async function listProjects(): Promise<ProjectWithRole[]> {

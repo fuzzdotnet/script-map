@@ -1,15 +1,8 @@
 import { notFound } from "next/navigation";
-import { getProjectByToken, getProjectSections } from "@/actions/projects";
-import { getHighlightsForProject } from "@/actions/highlights";
-import {
-  getMediaFilesForProject,
-  getFileReferencesForProject,
-  getHighlightMediaForProject,
-  getSectionMediaForProject,
-} from "@/actions/media";
+import { getProjectByToken, getProjectPageData } from "@/actions/projects";
+import { getMediaFilesForProject, getFileReferencesForProject } from "@/actions/media";
 import { listMembers } from "@/actions/members";
 import { getProfiles } from "@/actions/profiles";
-import { getCommentsForProject } from "@/actions/comments";
 import { getAuthUser } from "@/lib/supabase/auth";
 import { ScriptViewer } from "@/components/script/ScriptViewer";
 import { TopBar } from "@/components/layout/TopBar";
@@ -28,18 +21,16 @@ export default async function ProjectPage({
 
   if (!project) notFound();
 
-  // Fetch all data + members in one parallel batch
-  const [sections, highlights, mediaFiles, fileReferences, highlightMedia, sectionMedia, comments, members] =
-    await Promise.all([
-      getProjectSections(project.id),
-      getHighlightsForProject(project.id),
-      getMediaFilesForProject(project.id),
-      getFileReferencesForProject(project.id),
-      getHighlightMediaForProject(project.id),
-      getSectionMediaForProject(project.id),
-      getCommentsForProject(project.id),
-      user ? listMembers(project.id) : Promise.resolve([]),
-    ]);
+  // Stage 2: 4 parallel queries (down from 8)
+  // getProjectPageData combines sections + highlights + highlight_media + section_media + comments
+  const [pageData, mediaFiles, fileReferences, members] = await Promise.all([
+    getProjectPageData(project.id),
+    getMediaFilesForProject(project.id),
+    getFileReferencesForProject(project.id),
+    user ? listMembers(project.id) : Promise.resolve([]),
+  ]);
+
+  const { sections, highlights, highlightMedia, sectionMedia, comments } = pageData;
 
   // Compute role from already-fetched data (no extra queries)
   let role: ProjectRole | "none" = "none";
@@ -63,7 +54,7 @@ export default async function ProjectPage({
 
   const canEdit = role === "owner" || role === "editor";
 
-  // Batch-fetch profiles for all referenced users
+  // Stage 3: batch-fetch profiles for all referenced users
   const userIds = new Set<string>();
   if (user) userIds.add(user.id);
   for (const h of highlights) {

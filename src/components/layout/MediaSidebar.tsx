@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback, useTransition } from "react";
-import { X, Upload, FileText, ImagePlus, Layers, Video, Trash2, MessageSquare, Send, Loader2 } from "lucide-react";
+import { X, Upload, FileText, ImagePlus, Layers, Video, Clapperboard, Trash2, MessageSquare, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
@@ -48,7 +48,7 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
   );
 
   const coverageType = selectedHighlight ? getCoverageType(selectedHighlight) : "media";
-  const isMediaType = coverageType === "media";
+  const isMediaType = coverageType === "media" || coverageType === "field_footage";
 
   // Get attribution name
   const creatorName = useMemo(() => {
@@ -107,7 +107,7 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
   const targetId = selectedHighlightId || selectedSectionId;
 
   const coverageConfig = COVERAGE_TYPES[coverageType];
-  const CoverageIcon = coverageType === "graphics" ? Layers : coverageType === "on_camera" ? Video : ImagePlus;
+  const CoverageIcon = coverageType === "graphics" ? Layers : coverageType === "on_camera" ? Video : coverageType === "field_footage" ? Clapperboard : ImagePlus;
 
   return (
     <AnimatePresence>
@@ -215,12 +215,14 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
                       icon={<ImagePlus className="h-3.5 w-3.5" />}
                       label={`Media${totalMedia > 0 ? ` (${totalMedia})` : ""}`}
                     />
-                    <TabButton
-                      active={activeTab === "upload"}
-                      onClick={() => setActiveTab("upload")}
-                      icon={<Upload className="h-3.5 w-3.5" />}
-                      label="Upload"
-                    />
+                    {coverageType !== "field_footage" && (
+                      <TabButton
+                        active={activeTab === "upload"}
+                        onClick={() => setActiveTab("upload")}
+                        icon={<Upload className="h-3.5 w-3.5" />}
+                        label="Upload"
+                      />
+                    )}
                     <TabButton
                       active={activeTab === "reference"}
                       onClick={() => setActiveTab("reference")}

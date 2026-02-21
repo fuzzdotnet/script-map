@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ImagePlus, Layers, Video } from "lucide-react";
+import { ImagePlus, Layers, Video, Clapperboard } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { COVERAGE_TYPES, toLineColor, type CoverageType } from "@/lib/annotationEngine";
 import { updateProjectSettings } from "@/actions/projects";
 
-const icons = {
+const icons: Record<CoverageType, typeof ImagePlus> = {
   media: ImagePlus,
   graphics: Layers,
   on_camera: Video,
-} as const;
+  field_footage: Clapperboard,
+};
 
 // Preset colors that look good at 35% opacity on dark backgrounds (OKLCH)
 const COLOR_PRESETS = [
@@ -42,7 +43,13 @@ export function CoverageLegend({ projectId, coverageColors }: CoverageLegendProp
     setColors(updated);
 
     // Apply CSS variable override immediately (both fill and line variants)
-    const varName = type === "media" ? "--highlight-blue" : type === "graphics" ? "--highlight-green" : "--highlight-amber";
+    const varMap: Record<CoverageType, string> = {
+      media: "--highlight-blue",
+      graphics: "--highlight-green",
+      on_camera: "--highlight-amber",
+      field_footage: "--highlight-purple",
+    };
+    const varName = varMap[type];
     document.documentElement.style.setProperty(varName, color);
     document.documentElement.style.setProperty(`${varName}-line`, toLineColor(color));
 

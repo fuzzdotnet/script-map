@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ImagePlus, Layers, Video, X } from "lucide-react";
+import { ImagePlus, Layers, Video, Clapperboard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TextSelection } from "@/hooks/useTextSelection";
 
@@ -10,6 +10,7 @@ interface FloatingToolbarProps {
   onMedia: () => void;
   onGraphics: () => void;
   onCamera: () => void;
+  onFieldFootage: () => void;
   onDismiss: () => void;
 }
 
@@ -18,6 +19,7 @@ export function FloatingToolbar({
   onMedia,
   onGraphics,
   onCamera,
+  onFieldFootage,
   onDismiss,
 }: FloatingToolbarProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -71,6 +73,16 @@ export function FloatingToolbar({
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--highlight-amber)" }} />
         <Video className="h-3.5 w-3.5" />
         On Camera
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2 text-xs"
+        onClick={onFieldFootage}
+      >
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--highlight-purple)" }} />
+        <Clapperboard className="h-3.5 w-3.5" />
+        Field Footage
       </Button>
       <Button
         variant="ghost"

@@ -119,6 +119,10 @@ export function ScriptViewer({
       document.documentElement.style.setProperty("--highlight-amber", cc.on_camera);
       document.documentElement.style.setProperty("--highlight-amber-line", toLineColor(cc.on_camera));
     }
+    if (cc.field_footage) {
+      document.documentElement.style.setProperty("--highlight-purple", cc.field_footage);
+      document.documentElement.style.setProperty("--highlight-purple-line", toLineColor(cc.field_footage));
+    }
 
     return () => {
       // Reset on unmount so other pages aren't affected
@@ -128,10 +132,12 @@ export function ScriptViewer({
       document.documentElement.style.removeProperty("--highlight-green-line");
       document.documentElement.style.removeProperty("--highlight-amber");
       document.documentElement.style.removeProperty("--highlight-amber-line");
+      document.documentElement.style.removeProperty("--highlight-purple");
+      document.documentElement.style.removeProperty("--highlight-purple-line");
     };
   }, [settings]);
 
-  function handleCoverage(label: string, color: string, openUpload?: boolean) {
+  function handleCoverage(label: string, color: string, openToTab?: "upload" | "reference") {
     if (!selection) return;
 
     startTransition(async () => {
@@ -154,8 +160,8 @@ export function ScriptViewer({
           addHighlight(h);
           markAsNew(h.id);
         }
-        if (openUpload && highlights.length > 0) {
-          selectHighlight(highlights[0].id, "upload");
+        if (openToTab && highlights.length > 0) {
+          selectHighlight(highlights[0].id, openToTab);
         }
         clearSelection();
       } catch (err) {
@@ -164,9 +170,10 @@ export function ScriptViewer({
     });
   }
 
-  const handleMedia = () => handleCoverage("media", "var(--highlight-blue)", true);
+  const handleMedia = () => handleCoverage("media", "var(--highlight-blue)", "upload");
   const handleGraphics = () => handleCoverage("graphics", "var(--highlight-green)");
   const handleOnCamera = () => handleCoverage("on_camera", "var(--highlight-amber)");
+  const handleFieldFootage = () => handleCoverage("field_footage", "var(--highlight-purple)", "reference");
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -197,6 +204,7 @@ export function ScriptViewer({
               onMedia={handleMedia}
               onGraphics={handleGraphics}
               onCamera={handleOnCamera}
+              onFieldFootage={handleFieldFootage}
               onDismiss={clearSelection}
             />
           )}

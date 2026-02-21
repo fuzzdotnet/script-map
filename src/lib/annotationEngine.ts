@@ -4,7 +4,7 @@ import type { Highlight } from "@/lib/supabase/types";
 // COVERAGE TYPES
 // ============================================
 
-export type CoverageType = "media" | "graphics" | "on_camera";
+export type CoverageType = "media" | "graphics" | "on_camera" | "field_footage";
 
 export interface CoverageTypeConfig {
   type: CoverageType;
@@ -16,6 +16,7 @@ export const COVERAGE_TYPES: Record<CoverageType, CoverageTypeConfig> = {
   media: { type: "media", label: "Media", color: "var(--highlight-blue)" },
   graphics: { type: "graphics", label: "Graphics", color: "var(--highlight-green)" },
   on_camera: { type: "on_camera", label: "On Camera", color: "var(--highlight-amber)" },
+  field_footage: { type: "field_footage", label: "Field Footage", color: "var(--highlight-purple)" },
 };
 
 /** Get the coverage type from a highlight's label field */

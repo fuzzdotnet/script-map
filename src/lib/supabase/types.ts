@@ -3,6 +3,7 @@ export interface ProjectSettings {
     media?: string;
     graphics?: string;
     on_camera?: string;
+    field_footage?: string;
   };
 }
 

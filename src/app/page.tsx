@@ -15,7 +15,7 @@ export default function Home() {
         {/* Ambient glow */}
         <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 h-72 w-[32rem] rounded-full bg-purple-500/[0.08] blur-[120px]" />
 
-        <h1 className="relative text-6xl font-bold tracking-tight sm:text-8xl bg-gradient-to-b from-white via-purple-200/60 to-purple-400/25 bg-clip-text text-transparent leading-none pb-2">
+        <h1 className="relative text-6xl font-bold tracking-tight sm:text-8xl leading-none pb-2">
           Script Liner
         </h1>
         <p className="relative mt-6 text-xl text-muted-foreground">

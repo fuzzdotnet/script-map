@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScriptSection } from "./ScriptSection";
 import { FloatingToolbar } from "./FloatingToolbar";
@@ -9,6 +9,7 @@ import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { createHighlight } from "@/actions/highlights";
+import { toLineColor } from "@/lib/annotationEngine";
 import type {
   Section,
   Highlight,
@@ -81,19 +82,49 @@ export function ScriptViewer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Track newly created highlight IDs for the flash animation
+  const [newHighlightIds, setNewHighlightIds] = useState<Set<string>>(new Set());
+  const newHighlightTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  function markAsNew(id: string) {
+    setNewHighlightIds((prev) => new Set(prev).add(id));
+    // Remove the "new" flag after the animation duration
+    const timer = setTimeout(() => {
+      setNewHighlightIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      newHighlightTimers.current.delete(id);
+    }, 600);
+    newHighlightTimers.current.set(id, timer);
+  }
+
   // Apply saved coverage colors as CSS variable overrides
   useEffect(() => {
     const cc = settings?.coverageColors;
     if (!cc) return;
-    if (cc.media) document.documentElement.style.setProperty("--highlight-blue", cc.media);
-    if (cc.graphics) document.documentElement.style.setProperty("--highlight-green", cc.graphics);
-    if (cc.on_camera) document.documentElement.style.setProperty("--highlight-amber", cc.on_camera);
+    if (cc.media) {
+      document.documentElement.style.setProperty("--highlight-blue", cc.media);
+      document.documentElement.style.setProperty("--highlight-blue-line", toLineColor(cc.media));
+    }
+    if (cc.graphics) {
+      document.documentElement.style.setProperty("--highlight-green", cc.graphics);
+      document.documentElement.style.setProperty("--highlight-green-line", toLineColor(cc.graphics));
+    }
+    if (cc.on_camera) {
+      document.documentElement.style.setProperty("--highlight-amber", cc.on_camera);
+      document.documentElement.style.setProperty("--highlight-amber-line", toLineColor(cc.on_camera));
+    }
 
     return () => {
       // Reset on unmount so other pages aren't affected
       document.documentElement.style.removeProperty("--highlight-blue");
+      document.documentElement.style.removeProperty("--highlight-blue-line");
       document.documentElement.style.removeProperty("--highlight-green");
+      document.documentElement.style.removeProperty("--highlight-green-line");
       document.documentElement.style.removeProperty("--highlight-amber");
+      document.documentElement.style.removeProperty("--highlight-amber-line");
     };
   }, [settings]);
 
@@ -111,6 +142,7 @@ export function ScriptViewer({
         });
 
         addHighlight(highlight);
+        markAsNew(highlight.id);
         selectHighlight(highlight.id, "upload");
         clearSelection();
       } catch (err) {
@@ -133,6 +165,7 @@ export function ScriptViewer({
         });
 
         addHighlight(highlight);
+        markAsNew(highlight.id);
         clearSelection();
       } catch (err) {
         console.error("Failed to create highlight:", err);
@@ -154,6 +187,7 @@ export function ScriptViewer({
         });
 
         addHighlight(highlight);
+        markAsNew(highlight.id);
         clearSelection();
       } catch (err) {
         console.error("Failed to create highlight:", err);
@@ -174,7 +208,7 @@ export function ScriptViewer({
           ) : (
             <div className="space-y-6">
               {sections.map((section) => (
-                <ScriptSection key={section.id} section={section} />
+                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} />
               ))}
             </div>
           )}

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ImagePlus, Layers, Video } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { COVERAGE_TYPES, type CoverageType } from "@/lib/annotationEngine";
+import { COVERAGE_TYPES, toLineColor, type CoverageType } from "@/lib/annotationEngine";
 import { updateProjectSettings } from "@/actions/projects";
 
 const icons = {
@@ -41,9 +41,10 @@ export function CoverageLegend({ projectId, coverageColors }: CoverageLegendProp
     const updated = { ...colors, [type]: color };
     setColors(updated);
 
-    // Apply CSS variable override immediately
+    // Apply CSS variable override immediately (both fill and line variants)
     const varName = type === "media" ? "--highlight-blue" : type === "graphics" ? "--highlight-green" : "--highlight-amber";
     document.documentElement.style.setProperty(varName, color);
+    document.documentElement.style.setProperty(`${varName}-line`, toLineColor(color));
 
     // Persist to DB
     startTransition(async () => {

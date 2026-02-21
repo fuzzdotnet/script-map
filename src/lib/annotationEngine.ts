@@ -39,6 +39,28 @@ export function getSpanColor(highlightIds: string[], allHighlights: Highlight[])
   return getHighlightCssColor(highlight);
 }
 
+/** CSS variable → line variant mapping */
+const LINE_VAR_MAP: Record<string, string> = {
+  "var(--highlight-blue)": "var(--highlight-blue-line)",
+  "var(--highlight-green)": "var(--highlight-green-line)",
+  "var(--highlight-amber)": "var(--highlight-amber-line)",
+  "var(--highlight-purple)": "var(--highlight-purple-line)",
+  "var(--highlight-rose)": "var(--highlight-rose-line)",
+};
+
+/** Convert a highlight bg color to its higher-opacity line variant */
+export function toLineColor(bgColor: string): string {
+  // If it's a known CSS variable, return the line variant
+  if (LINE_VAR_MAP[bgColor]) return LINE_VAR_MAP[bgColor];
+  // If it's an oklch() string with alpha, bump the alpha to 55%
+  return bgColor.replace(/\/\s*[\d.]+%?\s*\)/, "/ 55%)");
+}
+
+/** Get the line/accent color for a span (higher opacity for underlines & glow) */
+export function getSpanLineColor(highlightIds: string[], allHighlights: Highlight[]): string {
+  return toLineColor(getSpanColor(highlightIds, allHighlights));
+}
+
 // ============================================
 // RENDER SPANS
 // ============================================

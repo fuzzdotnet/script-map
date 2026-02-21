@@ -40,7 +40,7 @@ export function FloatingToolbar({
   return (
     <div
       ref={ref}
-      className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-white/20 bg-[oklch(0.22_0.005_260)] px-1 py-1 shadow-[0_4px_24px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-150"
+      className="fixed z-50 flex items-center gap-0.5 rounded-lg border border-white/20 bg-[oklch(0.22_0.005_260/0.85)] backdrop-blur-md px-1 py-1 shadow-[0_4px_24px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200"
     >
       <Button
         variant="ghost"

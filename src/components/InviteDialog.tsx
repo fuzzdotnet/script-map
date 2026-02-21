@@ -26,6 +26,7 @@ export function InviteDialog({ open, onOpenChange, projectId }: InviteDialogProp
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [emailWarning, setEmailWarning] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -55,9 +56,10 @@ export function InviteDialog({ open, onOpenChange, projectId }: InviteDialogProp
 
     startTransition(async () => {
       try {
-        const member = await inviteMember(projectId, email.trim(), role);
+        const { member, emailError } = await inviteMember(projectId, email.trim(), role);
         setMembers((prev) => [...prev, member]);
         setEmail("");
+        setEmailWarning(emailError || null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to invite");
       }
@@ -135,6 +137,11 @@ export function InviteDialog({ open, onOpenChange, projectId }: InviteDialogProp
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>
+          )}
+          {emailWarning && (
+            <p className="text-sm text-yellow-500">
+              Member added, but email failed: {emailWarning}
+            </p>
           )}
         </form>
 

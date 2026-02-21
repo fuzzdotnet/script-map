@@ -10,7 +10,7 @@ export async function inviteMember(
   projectId: string,
   email: string,
   role: "viewer" | "editor"
-): Promise<ProjectMember> {
+): Promise<{ member: ProjectMember; emailError?: string }> {
   const user = await requireProjectOwner(projectId);
   const supabase = createServerClient();
 
@@ -34,17 +34,23 @@ export async function inviteMember(
   }
 
   // Look up if a Supabase user exists with this email
-  const { data: users } = await supabase.auth.admin.listUsers();
-  const matchedUser = users?.users?.find(
-    (u) => u.email?.toLowerCase() === normalizedEmail
-  );
+  let matchedUserId: string | null = null;
+  try {
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const matchedUser = users?.users?.find(
+      (u) => u.email?.toLowerCase() === normalizedEmail
+    );
+    matchedUserId = matchedUser?.id || null;
+  } catch {
+    // Non-critical: user lookup failed, proceed without user_id
+  }
 
   // Insert membership
   const { data: member, error } = await supabase
     .from("project_members")
     .insert({
       project_id: projectId,
-      user_id: matchedUser?.id || null,
+      user_id: matchedUserId,
       invited_email: normalizedEmail,
       role,
     })
@@ -60,6 +66,8 @@ export async function inviteMember(
     .eq("id", projectId)
     .single();
 
+  let emailError: string | undefined;
+
   if (project) {
     try {
       const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://parkvibes.media";
@@ -71,12 +79,12 @@ export async function inviteMember(
         inviterEmail: user.email || "A Script Map user",
       });
     } catch (err) {
-      // Don't fail the invite if the email fails to send
+      emailError = err instanceof Error ? err.message : "Failed to send invite email";
       console.error("Failed to send invite email:", err);
     }
   }
 
-  return member;
+  return { member, emailError };
 }
 
 export async function removeMember(memberId: string) {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AuthListener } from "@/components/AuthListener";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthListener />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );

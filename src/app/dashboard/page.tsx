@@ -37,8 +37,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center px-6">
-      <header className="w-full max-w-2xl flex items-center justify-between pt-12 pb-8">
-        <h1 className="text-2xl font-bold">My Projects</h1>
+      <header className="relative w-full max-w-2xl flex items-center justify-between pt-12 pb-8">
+        {/* Ambient glow */}
+        <div className="pointer-events-none absolute left-1/4 -top-4 h-40 w-[24rem] rounded-full bg-purple-500/[0.06] blur-[100px]" />
+        <h1 className="relative text-2xl font-bold bg-gradient-to-r from-white to-purple-300/80 bg-clip-text text-transparent">My Projects</h1>
         <Link
           href="/new"
           className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition-all hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98]"
@@ -52,9 +54,9 @@ export default async function DashboardPage() {
         {projectsWithStats.length > 0 ? (
           <ProjectList projects={projectsWithStats} />
         ) : (
-          <div className="py-24 text-center text-muted-foreground">
-            <p className="text-lg">No projects yet.</p>
-            <p className="mt-2 text-sm">
+          <div className="py-24 text-center">
+            <p className="text-lg text-muted-foreground">No projects yet.</p>
+            <p className="mt-2 text-sm text-purple-300/40">
               Create your first project to get started.
             </p>
           </div>

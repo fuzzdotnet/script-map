@@ -58,14 +58,14 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
           return (
             <div
               key={project.id}
-              className="group flex items-center rounded-xl -mx-3 hover:bg-surface transition-colors duration-150"
+              className="group flex items-center rounded-xl -mx-3 hover:bg-purple-500/[0.04] transition-colors duration-150"
             >
               <Link
                 href={`/p/${project.share_token}`}
                 className="flex flex-1 items-center gap-4 px-3 py-3.5 min-w-0"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface group-hover:bg-elevated transition-colors">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 group-hover:bg-purple-500/15 transition-colors">
+                  <FileText className="h-4 w-4 text-purple-300/70" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">

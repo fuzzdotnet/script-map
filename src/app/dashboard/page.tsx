@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Settings } from "lucide-react";
+import { Plus, Settings, Shield } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ProjectList } from "@/components/ProjectList";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -69,6 +69,15 @@ export default async function DashboardPage() {
         )}
         <p className="text-xs text-muted-foreground/50 mb-2">{user.email}</p>
         <div className="flex items-center justify-center gap-3">
+          {profile?.is_admin && (
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              <Shield className="h-3 w-3" />
+              Admin
+            </Link>
+          )}
           <Link
             href="/settings"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"

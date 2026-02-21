@@ -88,7 +88,12 @@ export function MediaUploader({
                 ? {
                     ...u,
                     status: "error",
-                    error: err instanceof Error ? err.message : "Upload failed",
+                    error:
+                      err instanceof Error && err.message.includes("Upload permission")
+                        ? "Upload permission required. Ask your admin to enable uploads."
+                        : err instanceof Error
+                          ? err.message
+                          : "Upload failed",
                   }
                 : u
             )

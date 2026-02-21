@@ -2,6 +2,7 @@
 
 import { createServerClient } from "@/lib/supabase/server";
 import { requireProjectEditor } from "@/lib/auth-helpers";
+import { requireAuth } from "@/lib/supabase/auth";
 import type {
   MediaFile,
   FileReference,
@@ -393,7 +394,19 @@ export async function uploadMediaFile(formData: FormData): Promise<{
 
   await requireProjectEditor(projectId);
 
+  // Check upload permission (only admins and explicitly allowed users can upload)
+  const user = await requireAuth();
   const supabase = createServerClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("can_upload, is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.can_upload && !profile?.is_admin) {
+    throw new Error("Upload permission required. Contact the project admin to enable uploads for your account.");
+  }
 
   // Convert File to Buffer for reliable server-side upload
   const arrayBuffer = await file.arrayBuffer();

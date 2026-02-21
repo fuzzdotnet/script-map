@@ -211,3 +211,18 @@ CREATE POLICY "Public read" ON section_media FOR SELECT USING (true);
 CREATE POLICY "Public read" ON notes FOR SELECT USING (true);
 
 -- Service role bypasses RLS, so writes via Server Actions work automatically
+
+-- ============================================
+-- PROFILES (user settings & permissions)
+-- ============================================
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  display_name TEXT NOT NULL,
+  is_admin BOOLEAN NOT NULL DEFAULT false,
+  can_upload BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON profiles FOR SELECT USING (true);

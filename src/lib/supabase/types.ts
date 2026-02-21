@@ -123,6 +123,8 @@ export interface Note {
 export interface Profile {
   id: string;
   display_name: string;
+  is_admin: boolean;
+  can_upload: boolean;
   created_at: string;
   updated_at: string;
 }

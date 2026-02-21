@@ -64,7 +64,7 @@ export function CoverageLegend({ projectId, coverageColors }: CoverageLegendProp
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 flex items-center gap-3 rounded-full border border-white/15 bg-surface/90 backdrop-blur-sm px-4 py-2 text-xs text-muted-foreground shadow-lg">
+    <div className="fixed bottom-4 left-4 z-40 flex flex-col gap-1 rounded-xl border border-white/15 bg-surface/90 backdrop-blur-sm px-3 py-2 text-xs text-muted-foreground shadow-lg">
       {Object.values(COVERAGE_TYPES).map((ct) => {
         const Icon = icons[ct.type];
         return (

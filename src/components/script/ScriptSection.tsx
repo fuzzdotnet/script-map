@@ -10,9 +10,10 @@ import type { Section, Highlight } from "@/lib/supabase/types";
 interface ScriptSectionProps {
   section: Section;
   newHighlightIds?: Set<string>;
+  presenterMode?: boolean;
 }
 
-export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) {
+export function ScriptSection({ section, newHighlightIds, presenterMode }: ScriptSectionProps) {
   // Select raw arrays from store (stable references — no new objects created)
   const allHighlights = useAnnotationStore((s) => s.highlights);
   const allSectionMedia = useAnnotationStore((s) => s.sectionMedia);
@@ -48,6 +49,18 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
     [section.body, highlights]
   );
 
+  // In presenter mode, only show spans covered by on_camera highlights
+  const presenterSpans = useMemo(() => {
+    if (!presenterMode) return spans;
+    return spans.filter((span) => {
+      if (span.highlightIds.length === 0) return false;
+      return span.highlightIds.some((id) => {
+        const h = highlights.find((hl) => hl.id === id);
+        return h?.label === "on_camera";
+      });
+    });
+  }, [presenterMode, spans, highlights]);
+
   // Track which highlight was just selected (for pulse animation)
   const [pulsingId, setPulsingId] = useState<string | null>(null);
   const prevSelectedRef = useRef<string | null>(null);
@@ -66,6 +79,7 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
   }, [selectedHighlightId, highlights]);
 
   if (isHeading) {
+    if (presenterMode) return null;
     return (
       <div className="group pt-8 pb-2" data-section-id={section.id}>
         <div className="flex items-center gap-3">
@@ -95,13 +109,17 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
 
   return (
     <div className="group relative" data-section-id={section.id}>
-      {/* Margin coverage indicators */}
-      {highlights.length > 0 && (
+      {/* Margin coverage indicators — hidden in presenter mode */}
+      {!presenterMode && highlights.length > 0 && (
         <MarginGutter highlights={highlights} sectionBody={section.body} />
       )}
 
-      <p className="script-text text-foreground/90" data-section-text>
-        {spans.map((span, i) => {
+      <p className={`script-text text-foreground/90 ${presenterMode ? "presenter-text" : ""}`} data-section-text>
+        {presenterSpans.map((span, i) => {
+          if (presenterMode) {
+            return <span key={i}>{span.text}</span>;
+          }
+
           if (span.highlightIds.length === 0) {
             return <span key={i}>{span.text}</span>;
           }
@@ -138,8 +156,8 @@ export function ScriptSection({ section, newHighlightIds }: ScriptSectionProps) 
         })}
       </p>
 
-      {/* Section-level media indicator */}
-      {totalSectionMedia > 0 && (
+      {/* Section-level media indicator — hidden in presenter mode */}
+      {!presenterMode && totalSectionMedia > 0 && (
         <div className="mt-2 flex items-center gap-2">
           <Badge
             variant="secondary"

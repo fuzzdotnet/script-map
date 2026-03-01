@@ -10,6 +10,7 @@ import {
   Pencil,
   UserPlus,
   BookmarkPlus,
+  Presentation,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -53,6 +54,8 @@ export function TopBar({
 
   const mediaFiles = useAnnotationStore((s) => s.mediaFiles);
   const fileReferences = useAnnotationStore((s) => s.fileReferences);
+  const presenterMode = useAnnotationStore((s) => s.presenterMode);
+  const togglePresenterMode = useAnnotationStore((s) => s.togglePresenterMode);
 
   async function copyLink() {
     const url = window.location.href;
@@ -167,6 +170,22 @@ export function TopBar({
               </TooltipContent>
             </Tooltip>
           )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={presenterMode ? "default" : "outline"}
+                size="icon"
+                onClick={togglePresenterMode}
+                className="h-8 w-8"
+              >
+                <Presentation className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {presenterMode ? "Exit Presenter" : "Presenter Mode"}
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>

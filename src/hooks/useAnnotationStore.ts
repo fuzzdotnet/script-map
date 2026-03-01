@@ -28,6 +28,8 @@ interface AnnotationState {
   selectedSectionId: string | null;
   sidebarOpen: boolean;
   sidebarTab: "media" | "upload" | "reference";
+  presenterMode: boolean;
+  mirrorText: boolean;
 
   // Actions: data
   setHighlights: (highlights: Highlight[]) => void;
@@ -59,6 +61,8 @@ interface AnnotationState {
   openSidebar: () => void;
   closeSidebar: () => void;
   setSidebarTab: (tab: "media" | "upload" | "reference") => void;
+  togglePresenterMode: () => void;
+  toggleMirrorText: () => void;
 
   // Derived helpers
   getHighlightsForSection: (sectionId: string) => Highlight[];
@@ -91,6 +95,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   selectedSectionId: null,
   sidebarOpen: false,
   sidebarTab: "media",
+  presenterMode: false,
+  mirrorText: false,
 
   // Actions: data
   setHighlights: (highlights) => set({ highlights }),
@@ -222,6 +228,17 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
   closeSidebar: () =>
     set({ sidebarOpen: false, selectedHighlightId: null, selectedGroupId: null, selectedSectionId: null }),
+  togglePresenterMode: () =>
+    set((s) => ({
+      presenterMode: !s.presenterMode,
+      mirrorText: s.presenterMode ? false : s.mirrorText,
+      sidebarOpen: false,
+      selectedHighlightId: null,
+      selectedGroupId: null,
+      selectedSectionId: null,
+    })),
+  toggleMirrorText: () =>
+    set((s) => ({ mirrorText: !s.mirrorText })),
 
   // Derived helpers
   getHighlightsForSection: (sectionId) =>

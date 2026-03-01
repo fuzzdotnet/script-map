@@ -4,6 +4,15 @@ import { createServerClient } from "@supabase/ssr";
 const PROTECTED_ROUTES = ["/dashboard", "/new", "/setup", "/settings", "/admin"];
 
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+  const code = searchParams.get("code");
+
+  // Fast path: skip auth for public routes when there's no auth code to exchange
+  const isPublic = pathname === "/" || pathname.startsWith("/p/");
+  if (isPublic && !code) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -27,10 +36,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { pathname, searchParams } = request.nextUrl;
-
   // Handle auth code exchange — Supabase may redirect to any page with ?code=
-  const code = searchParams.get("code");
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {

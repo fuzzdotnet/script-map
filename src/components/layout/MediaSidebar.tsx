@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, useTransition } from "react";
 import { X, Upload, FileText, ImagePlus, Layers, Video, Clapperboard, Trash2, MessageSquare, Send, Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { MediaUploader } from "@/components/media/MediaUploader";
@@ -111,14 +110,10 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
   const CoverageIcon = coverageType === "graphics" ? Layers : coverageType === "on_camera" ? Video : coverageType === "field_footage" ? Clapperboard : ImagePlus;
 
   return (
-    <AnimatePresence>
-      {sidebarOpen && (
-        <motion.div
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 420, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="border-l border-border bg-surface overflow-hidden flex-shrink-0"
+        <div
+          className={`border-l border-border bg-surface overflow-hidden flex-shrink-0 transition-[width,opacity] duration-200 ease-in-out ${
+            sidebarOpen ? "w-[420px] opacity-100" : "w-0 opacity-0"
+          }`}
         >
           <div className="flex h-full w-[420px] flex-col">
             {/* Header */}
@@ -336,9 +331,7 @@ export function MediaSidebar({ projectId, canEdit = false, canComment = false }:
               </>
             )}
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
   );
 }
 

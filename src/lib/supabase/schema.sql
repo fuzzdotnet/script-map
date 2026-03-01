@@ -227,3 +227,22 @@ CREATE TABLE profiles (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON profiles FOR SELECT USING (true);
+
+-- ============================================
+-- SCRIPT VERSIONS (snapshot history)
+-- ============================================
+CREATE TABLE script_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  label TEXT NOT NULL DEFAULT 'Before script edit',
+  snapshot JSONB NOT NULL,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(project_id, version_number)
+);
+
+CREATE INDEX idx_script_versions_project ON script_versions(project_id, version_number DESC);
+
+ALTER TABLE script_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON script_versions FOR SELECT USING (true);

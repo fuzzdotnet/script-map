@@ -5,6 +5,8 @@ import { createServerClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import { requireProjectOwner, requireProjectEditor } from "@/lib/auth-helpers";
 import { parseScriptText } from "@/lib/sectionParser";
+import { remapHighlights } from "@/lib/highlightRemapper";
+import { createSnapshot } from "@/actions/versions";
 import type {
   Project,
   Section,
@@ -276,34 +278,125 @@ export async function getProjectStats(
 }
 
 export async function replaceProjectScript(projectId: string, scriptText: string) {
-  await requireProjectEditor(projectId);
+  const user = await requireProjectEditor(projectId);
   const supabase = createServerClient();
 
-  // Delete existing sections (cascades to highlights, highlight_media, section_media)
-  const { error: deleteError } = await supabase
+  // 1. Fetch old sections (ordered) and their highlights
+  const { data: oldSections } = await supabase
     .from("sections")
-    .delete()
-    .eq("project_id", projectId);
+    .select()
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true });
 
-  if (deleteError) throw new Error(`Failed to clear sections: ${deleteError.message}`);
+  const oldSectionList: Section[] = oldSections || [];
+  const oldSectionIds = oldSectionList.map((s) => s.id);
 
-  // Re-parse and insert new sections
+  // Reconstruct old full text (same as the edit page does)
+  const oldFullText = oldSectionList.map((s) => s.body).join("\n\n");
+
+  // 2. Early return if nothing changed
+  if (oldFullText === scriptText) {
+    return;
+  }
+
+  // 3. Snapshot current state before editing (so it can be reverted)
+  await createSnapshot(projectId, "Before script edit", user.id);
+
+  // 4. Parse new script text
   const parsedSections = parseScriptText(scriptText);
 
-  if (parsedSections.length > 0) {
-    const sectionRows = parsedSections.map((section, index) => ({
-      project_id: projectId,
-      title: section.title,
-      body: section.body,
-      section_type: section.section_type,
-      sort_order: index,
-    }));
+  // 4. Try to preserve highlights via diff-based remapping
+  try {
+    // Fetch highlights for old sections
+    let oldHighlights: Highlight[] = [];
+    if (oldSectionIds.length > 0) {
+      const { data: hlData } = await supabase
+        .from("highlights")
+        .select()
+        .in("section_id", oldSectionIds);
+      oldHighlights = hlData || [];
+    }
 
-    const { error: insertError } = await supabase
+    // Insert new sections alongside old ones
+    let insertedSectionIds: string[] = [];
+    if (parsedSections.length > 0) {
+      const sectionRows = parsedSections.map((section, index) => ({
+        project_id: projectId,
+        title: section.title,
+        body: section.body,
+        section_type: section.section_type,
+        sort_order: index,
+      }));
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("sections")
+        .insert(sectionRows)
+        .select("id, sort_order")
+        .order("sort_order", { ascending: true });
+
+      if (insertError) throw new Error(insertError.message);
+      insertedSectionIds = (inserted || []).map((s) => s.id);
+    }
+
+    // Compute remapping and update surviving highlights
+    if (oldHighlights.length > 0 && insertedSectionIds.length > 0) {
+      const remapped = remapHighlights(
+        oldSectionList,
+        oldHighlights,
+        scriptText,
+        parsedSections
+      );
+
+      // Update each surviving highlight to point to its new section
+      await Promise.all(
+        remapped.map((r) =>
+          supabase
+            .from("highlights")
+            .update({
+              section_id: insertedSectionIds[r.newSectionIndex],
+              start_offset: r.newStartOffset,
+              end_offset: r.newEndOffset,
+            })
+            .eq("id", r.highlightId)
+        )
+      );
+    }
+
+    // Delete old sections (cascade cleans up un-remapped highlights)
+    if (oldSectionIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("sections")
+        .delete()
+        .in("id", oldSectionIds);
+
+      if (deleteError) throw new Error(deleteError.message);
+    }
+  } catch (err) {
+    // Fallback: delete all old sections and insert fresh (current behavior)
+    console.error("Highlight remapping failed, falling back to clean replace:", err);
+
+    const { error: deleteError } = await supabase
       .from("sections")
-      .insert(sectionRows);
+      .delete()
+      .eq("project_id", projectId);
 
-    if (insertError) throw new Error(`Failed to create sections: ${insertError.message}`);
+    if (deleteError) throw new Error(`Failed to clear sections: ${deleteError.message}`);
+
+    if (parsedSections.length > 0) {
+      const sectionRows = parsedSections.map((section, index) => ({
+        project_id: projectId,
+        title: section.title,
+        body: section.body,
+        section_type: section.section_type,
+        sort_order: index,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("sections")
+        .insert(sectionRows);
+
+      if (insertError) throw new Error(`Failed to create sections: ${insertError.message}`);
+    }
   }
 
   // Touch updated_at

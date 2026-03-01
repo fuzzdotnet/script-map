@@ -138,3 +138,38 @@ export interface HighlightComment {
   created_at: string;
   updated_at: string;
 }
+
+export interface VersionSnapshotSection {
+  title: string | null;
+  body: string;
+  section_type: "act" | "scene" | "paragraph" | "heading";
+  sort_order: number;
+}
+
+export interface VersionSnapshotHighlight {
+  section_index: number;
+  start_offset: number;
+  end_offset: number;
+  label: string | null;
+  color: string | null;
+  note: string | null;
+  group_id: string | null;
+  filmed: boolean;
+  collaborator_id: string | null;
+  created_by: string | null;
+}
+
+export interface VersionSnapshot {
+  sections: VersionSnapshotSection[];
+  highlights: VersionSnapshotHighlight[];
+}
+
+export interface ScriptVersion {
+  id: string;
+  project_id: string;
+  version_number: number;
+  label: string;
+  snapshot: VersionSnapshot;
+  created_by: string | null;
+  created_at: string;
+}

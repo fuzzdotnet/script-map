@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Copy,
   Check,
+  Clock,
   Download,
   Pencil,
   UserPlus,
@@ -100,6 +101,15 @@ export function TopBar({
             <Button variant="outline" size="sm" className="gap-2">
               <Pencil className="h-4 w-4" />
               Edit Script
+            </Button>
+          </Link>
+        )}
+
+        {role !== "none" && (
+          <Link href={`/p/${project.share_token}/history`} className="hidden md:inline-flex">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Clock className="h-4 w-4" />
+              History
             </Button>
           </Link>
         )}

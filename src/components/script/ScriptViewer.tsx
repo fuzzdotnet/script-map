@@ -11,7 +11,7 @@ import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { FlipHorizontal2 } from "lucide-react";
+import { FlipVertical2, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -83,6 +83,9 @@ export function ScriptViewer({
   const presenterMode = useAnnotationStore((s) => s.presenterMode);
   const mirrorText = useAnnotationStore((s) => s.mirrorText);
   const toggleMirrorText = useAnnotationStore((s) => s.toggleMirrorText);
+  const presenterFontSize = useAnnotationStore((s) => s.presenterFontSize);
+  const increasePresenterFont = useAnnotationStore((s) => s.increasePresenterFont);
+  const decreasePresenterFont = useAnnotationStore((s) => s.decreasePresenterFont);
   const allHighlights = useAnnotationStore((s) => s.highlights);
 
   // Hydrate store with server data
@@ -227,17 +230,43 @@ export function ScriptViewer({
           ) : (
             <div className="script-sections space-y-6">
               {visibleSections.map((section) => (
-                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} presenterMode={presenterMode} />
+                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} presenterMode={presenterMode} presenterFontSize={presenterFontSize} />
               ))}
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Mirror toggle — only visible in presenter mode */}
+      {/* Presenter controls — only visible in presenter mode */}
       {presenterMode && (
         <TooltipProvider>
-          <div className="fixed bottom-4 right-4 z-40">
+          <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={increasePresenterFont}
+                  className="h-10 w-10 rounded-full shadow-lg border-white/15"
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Increase Size</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={decreasePresenterFont}
+                  className="h-10 w-10 rounded-full shadow-lg border-white/15"
+                >
+                  <Minus className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Decrease Size</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -246,7 +275,7 @@ export function ScriptViewer({
                   onClick={toggleMirrorText}
                   className="h-10 w-10 rounded-full shadow-lg border-white/15"
                 >
-                  <FlipHorizontal2 className="h-5 w-5" />
+                  <FlipVertical2 className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left">

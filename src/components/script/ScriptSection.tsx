@@ -11,9 +11,10 @@ interface ScriptSectionProps {
   section: Section;
   newHighlightIds?: Set<string>;
   presenterMode?: boolean;
+  presenterFontSize?: number;
 }
 
-export function ScriptSection({ section, newHighlightIds, presenterMode }: ScriptSectionProps) {
+export function ScriptSection({ section, newHighlightIds, presenterMode, presenterFontSize }: ScriptSectionProps) {
   // Select raw arrays from store (stable references — no new objects created)
   const allHighlights = useAnnotationStore((s) => s.highlights);
   const allSectionMedia = useAnnotationStore((s) => s.sectionMedia);
@@ -114,7 +115,11 @@ export function ScriptSection({ section, newHighlightIds, presenterMode }: Scrip
         <MarginGutter highlights={highlights} sectionBody={section.body} />
       )}
 
-      <p className={`script-text text-foreground/90 ${presenterMode ? "presenter-text" : ""}`} data-section-text>
+      <p
+        className={`script-text text-foreground/90 ${presenterMode ? "presenter-text" : ""}`}
+        style={presenterMode && presenterFontSize ? { fontSize: `${presenterFontSize}rem`, lineHeight: 1.8 } : undefined}
+        data-section-text
+      >
         {presenterSpans.map((span, i) => {
           if (presenterMode) {
             return <span key={i}>{span.text}</span>;

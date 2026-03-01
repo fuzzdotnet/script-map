@@ -30,6 +30,7 @@ interface AnnotationState {
   sidebarTab: "media" | "upload" | "reference";
   presenterMode: boolean;
   mirrorText: boolean;
+  presenterFontSize: number;
 
   // Actions: data
   setHighlights: (highlights: Highlight[]) => void;
@@ -63,6 +64,8 @@ interface AnnotationState {
   setSidebarTab: (tab: "media" | "upload" | "reference") => void;
   togglePresenterMode: () => void;
   toggleMirrorText: () => void;
+  increasePresenterFont: () => void;
+  decreasePresenterFont: () => void;
 
   // Derived helpers
   getHighlightsForSection: (sectionId: string) => Highlight[];
@@ -97,6 +100,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   sidebarTab: "media",
   presenterMode: false,
   mirrorText: false,
+  presenterFontSize: 1.6,
 
   // Actions: data
   setHighlights: (highlights) => set({ highlights }),
@@ -239,6 +243,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     })),
   toggleMirrorText: () =>
     set((s) => ({ mirrorText: !s.mirrorText })),
+  increasePresenterFont: () =>
+    set((s) => ({ presenterFontSize: Math.min(s.presenterFontSize + 0.2, 4) })),
+  decreasePresenterFont: () =>
+    set((s) => ({ presenterFontSize: Math.max(s.presenterFontSize - 0.2, 0.8) })),
 
   // Derived helpers
   getHighlightsForSection: (sectionId) =>

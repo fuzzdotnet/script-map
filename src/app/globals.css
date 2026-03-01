@@ -283,18 +283,9 @@
    ============================================= */
 
 .presenter-mirror {
-  transform: scaleX(-1);
+  transform: scaleY(-1);
 }
 
 .presenter-text {
-  font-size: 1.4rem;
-  line-height: 2;
   letter-spacing: 0.02em;
-}
-
-@media (min-width: 768px) {
-  .presenter-text {
-    font-size: 1.6rem;
-    line-height: 2.1;
-  }
 }

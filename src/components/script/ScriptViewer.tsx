@@ -209,7 +209,7 @@ export function ScriptViewer({
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Script panel */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-hidden">
         <div className={`mx-auto max-w-3xl px-4 py-8 md:px-8 md:py-12 ${mirrorText ? "presenter-mirror" : ""}`}>
           {visibleSections.length === 0 ? (
             <div className="py-24 text-center text-muted-foreground">

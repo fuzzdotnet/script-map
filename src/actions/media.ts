@@ -413,7 +413,8 @@ export async function uploadMediaFile(formData: FormData): Promise<{
   const buffer = Buffer.from(arrayBuffer);
 
   const fileId = crypto.randomUUID();
-  const storagePath = `${projectId}/originals/${fileId}/${file.name}`;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `${projectId}/originals/${fileId}/${safeName}`;
 
   // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage

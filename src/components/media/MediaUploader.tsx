@@ -10,7 +10,6 @@ import {
   attachMediaToHighlight,
   attachMediaToSection,
 } from "@/actions/media";
-import { createClient } from "@/lib/supabase/client";
 
 interface MediaUploaderProps {
   projectId: string;
@@ -22,7 +21,39 @@ interface MediaUploaderProps {
 interface UploadItem {
   file: File;
   status: "pending" | "uploading" | "complete" | "error";
+  progress: number;
   error?: string;
+}
+
+function uploadWithProgress(
+  url: string,
+  file: File,
+  onProgress: (percent: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", file.type);
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed with status ${xhr.status}`));
+      }
+    });
+
+    xhr.addEventListener("error", () => reject(new Error("Upload failed — network error")));
+    xhr.addEventListener("timeout", () => reject(new Error("Upload timed out")));
+
+    xhr.send(file);
+  });
 }
 
 export function MediaUploader({
@@ -37,41 +68,41 @@ export function MediaUploader({
   const addHighlightMedia = useAnnotationStore((s) => s.addHighlightMedia);
   const addSectionMedia = useAnnotationStore((s) => s.addSectionMedia);
 
+  const updateUpload = useCallback(
+    (file: File, patch: Partial<UploadItem>) =>
+      setUploads((prev) =>
+        prev.map((u) => (u.file === file ? { ...u, ...patch } : u))
+      ),
+    []
+  );
+
   const processFiles = useCallback(
     async (files: FileList | File[]) => {
       const fileArray = Array.from(files);
       const newUploads: UploadItem[] = fileArray.map((file) => ({
         file,
         status: "pending" as const,
+        progress: 0,
       }));
       setUploads((prev) => [...prev, ...newUploads]);
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
 
-        setUploads((prev) =>
-          prev.map((u) =>
-            u.file === file ? { ...u, status: "uploading" } : u
-          )
-        );
+        updateUpload(file, { status: "uploading", progress: 0 });
 
         try {
           // 1. Get a signed upload URL (lightweight server action, no file data)
-          const { signedUrl, token, storagePath } = await createUploadUrl(
+          const { signedUrl, storagePath } = await createUploadUrl(
             projectId,
             file.name,
             file.type,
           );
 
-          // 2. Upload directly from browser to Supabase Storage
-          const supabase = createClient();
-          const { error: uploadError } = await supabase.storage
-            .from("script-map-media")
-            .uploadToSignedUrl(storagePath, token, file, {
-              contentType: file.type,
-            });
-
-          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+          // 2. Upload directly from browser to Supabase Storage via XHR (no timeout, progress tracking)
+          await uploadWithProgress(signedUrl, file, (percent) => {
+            updateUpload(file, { progress: percent });
+          });
 
           // 3. Create the DB record (lightweight server action, no file data)
           const { mediaFile } = await completeUpload({
@@ -98,34 +129,23 @@ export function MediaUploader({
             addSectionMedia(sm);
           }
 
-          setUploads((prev) =>
-            prev.map((u) =>
-              u.file === file ? { ...u, status: "complete" } : u
-            )
-          );
+          updateUpload(file, { status: "complete", progress: 100 });
         } catch (err) {
-          setUploads((prev) =>
-            prev.map((u) =>
-              u.file === file
-                ? {
-                    ...u,
-                    status: "error",
-                    error:
-                      err instanceof Error && err.message.includes("Upload permission")
-                        ? "Upload permission required. Ask your admin to enable uploads."
-                        : err instanceof Error
-                          ? err.message
-                          : "Upload failed",
-                  }
-                : u
-            )
-          );
+          updateUpload(file, {
+            status: "error",
+            error:
+              err instanceof Error && err.message.includes("Upload permission")
+                ? "Upload permission required. Ask your admin to enable uploads."
+                : err instanceof Error
+                  ? err.message
+                  : "Upload failed",
+          });
         }
       }
 
       onUploadComplete();
     },
-    [projectId, targetType, targetId, addMediaFile, addHighlightMedia, addSectionMedia, onUploadComplete]
+    [projectId, targetType, targetId, addMediaFile, addHighlightMedia, addSectionMedia, onUploadComplete, updateUpload]
   );
 
   function handleDrop(e: React.DragEvent) {
@@ -180,24 +200,39 @@ export function MediaUploader({
           {uploads.map((upload, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2 text-sm"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm"
             >
+              <div className="flex items-center gap-3">
+                {upload.status === "uploading" && (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                )}
+                {upload.status === "complete" && (
+                  <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                )}
+                {upload.status === "error" && (
+                  <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                )}
+                {upload.status === "pending" && (
+                  <div className="h-4 w-4 shrink-0 rounded-full border-2 border-muted-foreground" />
+                )}
+                <span className="truncate flex-1">{upload.file.name}</span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {upload.status === "uploading"
+                    ? `${upload.progress}%`
+                    : formatFileSize(upload.file.size)}
+                </span>
+              </div>
               {upload.status === "uploading" && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-foreground rounded-full transition-[width] duration-200"
+                    style={{ width: `${upload.progress}%` }}
+                  />
+                </div>
               )}
-              {upload.status === "complete" && (
-                <CheckCircle className="h-4 w-4 text-green-500" />
+              {upload.status === "error" && upload.error && (
+                <p className="mt-1 text-xs text-destructive">{upload.error}</p>
               )}
-              {upload.status === "error" && (
-                <AlertCircle className="h-4 w-4 text-destructive" />
-              )}
-              {upload.status === "pending" && (
-                <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
-              )}
-              <span className="truncate flex-1">{upload.file.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {formatFileSize(upload.file.size)}
-              </span>
             </div>
           ))}
         </div>

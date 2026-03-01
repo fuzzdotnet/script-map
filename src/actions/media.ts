@@ -383,18 +383,14 @@ export async function deleteFileReference(id: string) {
 // UPLOAD HELPERS
 // ============================================
 
-export async function uploadMediaFile(formData: FormData): Promise<{
-  mediaFile: MediaFile;
-  signedUrl: string;
-}> {
-  const file = formData.get("file") as File;
-  const projectId = formData.get("projectId") as string;
-
-  if (!file || !projectId) throw new Error("Missing file or projectId");
-
+/** Step 1: Authorize the upload and return a signed URL for direct browser→storage upload. */
+export async function createUploadUrl(
+  projectId: string,
+  filename: string,
+  contentType: string,
+): Promise<{ signedUrl: string; token: string; storagePath: string }> {
   await requireProjectEditor(projectId);
 
-  // Check upload permission (only admins and explicitly allowed users can upload)
   const user = await requireAuth();
   const supabase = createServerClient();
 
@@ -408,36 +404,38 @@ export async function uploadMediaFile(formData: FormData): Promise<{
     throw new Error("Upload permission required. Contact the project admin to enable uploads for your account.");
   }
 
-  // Convert File to Buffer for reliable server-side upload
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
   const fileId = crypto.randomUUID();
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storagePath = `${projectId}/originals/${fileId}/${safeName}`;
 
-  // Upload to Supabase Storage
-  const { error: uploadError } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from("script-map-media")
-    .upload(storagePath, buffer, {
-      contentType: file.type,
-      upsert: false,
-    });
+    .createSignedUploadUrl(storagePath);
 
-  if (uploadError) {
-    console.error("Storage upload error:", uploadError);
-    throw new Error(`Upload failed: ${uploadError.message}`);
-  }
+  if (error) throw new Error(`Failed to create upload URL: ${error.message}`);
 
-  // Create the database record (auth already checked above, call internal helper)
+  return { signedUrl: data.signedUrl, token: data.token, storagePath };
+}
+
+/** Step 2: After the client uploads directly to storage, create the DB record. */
+export async function completeUpload(params: {
+  projectId: string;
+  storagePath: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}): Promise<{ mediaFile: MediaFile }> {
+  await requireProjectEditor(params.projectId);
+  const supabase = createServerClient();
+
   const { data, error } = await supabase
     .from("media_files")
     .insert({
-      project_id: projectId,
-      storage_path: storagePath,
-      filename: file.name,
-      mime_type: file.type,
-      size_bytes: file.size,
+      project_id: params.projectId,
+      storage_path: params.storagePath,
+      filename: params.filename,
+      mime_type: params.mimeType,
+      size_bytes: params.sizeBytes,
       uploaded_by: null,
       upload_status: "complete",
     })
@@ -446,8 +444,5 @@ export async function uploadMediaFile(formData: FormData): Promise<{
 
   if (error) throw new Error(`Failed to create media record: ${error.message}`);
 
-  // Get a signed URL for immediate use
-  const signedUrl = await getSignedUrl(storagePath);
-
-  return { mediaFile: data, signedUrl };
+  return { mediaFile: data };
 }

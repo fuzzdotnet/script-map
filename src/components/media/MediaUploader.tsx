@@ -5,10 +5,12 @@ import { formatFileSize } from "@/lib/utils";
 import { Upload, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import {
-  uploadMediaFile,
+  createUploadUrl,
+  completeUpload,
   attachMediaToHighlight,
   attachMediaToSection,
 } from "@/actions/media";
+import { createClient } from "@/lib/supabase/client";
 
 interface MediaUploaderProps {
   projectId: string;
@@ -54,11 +56,31 @@ export function MediaUploader({
         );
 
         try {
-          const formData = new FormData();
-          formData.set("file", file);
-          formData.set("projectId", projectId);
+          // 1. Get a signed upload URL (lightweight server action, no file data)
+          const { signedUrl, token, storagePath } = await createUploadUrl(
+            projectId,
+            file.name,
+            file.type,
+          );
 
-          const { mediaFile } = await uploadMediaFile(formData);
+          // 2. Upload directly from browser to Supabase Storage
+          const supabase = createClient();
+          const { error: uploadError } = await supabase.storage
+            .from("script-map-media")
+            .uploadToSignedUrl(storagePath, token, file, {
+              contentType: file.type,
+            });
+
+          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+          // 3. Create the DB record (lightweight server action, no file data)
+          const { mediaFile } = await completeUpload({
+            projectId,
+            storagePath,
+            filename: file.name,
+            mimeType: file.type,
+            sizeBytes: file.size,
+          });
           addMediaFile(mediaFile);
 
           // Attach to target

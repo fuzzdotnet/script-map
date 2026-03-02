@@ -9,6 +9,7 @@ import type {
   MediaFile,
   FileReference,
   Profile,
+  Note,
 } from "@/lib/supabase/types";
 
 interface AnnotationState {
@@ -19,6 +20,7 @@ interface AnnotationState {
   mediaFiles: MediaFile[];
   fileReferences: FileReference[];
   comments: HighlightComment[];
+  notes: Note[];
   profiles: Record<string, Profile>;
   currentUserId: string | null;
 
@@ -53,6 +55,9 @@ interface AnnotationState {
   setComments: (comments: HighlightComment[]) => void;
   addComment: (comment: HighlightComment) => void;
   removeComment: (id: string) => void;
+  setNotes: (notes: Note[]) => void;
+  addNote: (note: Note) => void;
+  removeNote: (id: string) => void;
   setProfiles: (profiles: Record<string, Profile>) => void;
   setCurrentUserId: (id: string | null) => void;
 
@@ -79,6 +84,7 @@ interface AnnotationState {
     references: FileReference[];
     entries: SectionMedia[];
   };
+  getNotesForSection: (sectionId: string) => Note[];
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -89,6 +95,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   mediaFiles: [],
   fileReferences: [],
   comments: [],
+  notes: [],
   profiles: {},
   currentUserId: null,
 
@@ -193,6 +200,11 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set((s) => ({ comments: [...s.comments, comment] })),
   removeComment: (id) =>
     set((s) => ({ comments: s.comments.filter((c) => c.id !== id) })),
+  setNotes: (notes) => set({ notes }),
+  addNote: (note) =>
+    set((s) => ({ notes: [...s.notes, note] })),
+  removeNote: (id) =>
+    set((s) => ({ notes: s.notes.filter((n) => n.id !== id) })),
   setProfiles: (profiles) => set({ profiles }),
   setCurrentUserId: (id) => set({ currentUserId: id }),
 
@@ -283,4 +295,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       .filter((f): f is FileReference => !!f);
     return { uploaded, references, entries };
   },
+
+  getNotesForSection: (sectionId) =>
+    get().notes.filter((n) => n.section_id === sectionId),
 }));

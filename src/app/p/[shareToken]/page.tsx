@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProjectByToken, getProjectPageData } from "@/actions/projects";
 import { getMediaFilesForProject, getFileReferencesForProject } from "@/actions/media";
+import { getStickyNotesForProject } from "@/actions/notes";
 import { listMembers } from "@/actions/members";
 import { getProfiles } from "@/actions/profiles";
 import { getAuthUser } from "@/lib/supabase/auth";
@@ -23,11 +24,12 @@ export default async function ProjectPage({
 
   // Stage 2: 4 parallel queries (down from 8)
   // getProjectPageData combines sections + highlights + highlight_media + section_media + comments
-  const [pageData, mediaFiles, fileReferences, members] = await Promise.all([
+  const [pageData, mediaFiles, fileReferences, members, stickyNotes] = await Promise.all([
     getProjectPageData(project.id),
     getMediaFilesForProject(project.id),
     getFileReferencesForProject(project.id),
     user ? listMembers(project.id) : Promise.resolve([]),
+    getStickyNotesForProject(project.id),
   ]);
 
   const { sections, highlights, highlightMedia, sectionMedia, comments } = pageData;
@@ -63,6 +65,9 @@ export default async function ProjectPage({
   for (const c of comments) {
     userIds.add(c.user_id);
   }
+  for (const n of stickyNotes) {
+    if (n.user_id) userIds.add(n.user_id);
+  }
   const profiles = await getProfiles([...userIds]);
 
   const canComment = role !== "none";
@@ -88,6 +93,7 @@ export default async function ProjectPage({
           initialMediaFiles={mediaFiles}
           initialFileReferences={fileReferences}
           initialComments={comments}
+          initialNotes={stickyNotes}
           profiles={profiles}
           currentUserId={user?.id}
           canEdit={canEdit}

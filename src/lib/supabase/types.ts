@@ -116,6 +116,7 @@ export interface Note {
   highlight_id: string | null;
   section_id: string | null;
   collaborator_id: string | null;
+  user_id: string | null;
   body: string;
   created_at: string;
   updated_at: string;

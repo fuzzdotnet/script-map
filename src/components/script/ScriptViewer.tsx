@@ -31,6 +31,7 @@ import type {
   FileReference,
   Profile,
   ProjectSettings,
+  Note,
 } from "@/lib/supabase/types";
 
 interface ScriptViewerProps {
@@ -43,6 +44,7 @@ interface ScriptViewerProps {
   initialMediaFiles?: MediaFile[];
   initialFileReferences?: FileReference[];
   initialComments?: HighlightComment[];
+  initialNotes?: Note[];
   profiles?: Record<string, Profile>;
   currentUserId?: string;
   canEdit?: boolean;
@@ -59,6 +61,7 @@ export function ScriptViewer({
   initialMediaFiles = [],
   initialFileReferences = [],
   initialComments = [],
+  initialNotes = [],
   profiles = {},
   currentUserId,
   canEdit = false,
@@ -74,6 +77,7 @@ export function ScriptViewer({
   const setMediaFiles = useAnnotationStore((s) => s.setMediaFiles);
   const setFileReferences = useAnnotationStore((s) => s.setFileReferences);
   const setComments = useAnnotationStore((s) => s.setComments);
+  const setNotes = useAnnotationStore((s) => s.setNotes);
   const setProfiles = useAnnotationStore((s) => s.setProfiles);
   const setCurrentUserId = useAnnotationStore((s) => s.setCurrentUserId);
   const addHighlight = useAnnotationStore((s) => s.addHighlight);
@@ -96,6 +100,7 @@ export function ScriptViewer({
     setMediaFiles(initialMediaFiles);
     setFileReferences(initialFileReferences);
     setComments(initialComments);
+    setNotes(initialNotes);
     setProfiles(profiles);
     setCurrentUserId(currentUserId ?? null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,7 +235,7 @@ export function ScriptViewer({
           ) : (
             <div className="script-sections space-y-6">
               {visibleSections.map((section) => (
-                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} presenterMode={presenterMode} presenterFontSize={presenterFontSize} />
+                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} presenterMode={presenterMode} presenterFontSize={presenterFontSize} isMobile={isMobile} projectId={projectId} canComment={canComment} />
               ))}
             </div>
           )}

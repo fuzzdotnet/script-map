@@ -5,6 +5,7 @@ import { ImagePlus } from "lucide-react";
 import { computeRenderSpans, getSpanColor, getSpanLineColor } from "@/lib/annotationEngine";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { Badge } from "@/components/ui/badge";
+import { StickyNotePopover } from "./StickyNotePopover";
 import type { Section, Highlight } from "@/lib/supabase/types";
 
 interface ScriptSectionProps {
@@ -12,9 +13,12 @@ interface ScriptSectionProps {
   newHighlightIds?: Set<string>;
   presenterMode?: boolean;
   presenterFontSize?: number;
+  isMobile?: boolean;
+  projectId?: string;
+  canComment?: boolean;
 }
 
-export function ScriptSection({ section, newHighlightIds, presenterMode, presenterFontSize }: ScriptSectionProps) {
+export function ScriptSection({ section, newHighlightIds, presenterMode, presenterFontSize, isMobile, projectId, canComment }: ScriptSectionProps) {
   // Select raw arrays from store (stable references — no new objects created)
   const allHighlights = useAnnotationStore((s) => s.highlights);
   const allSectionMedia = useAnnotationStore((s) => s.sectionMedia);
@@ -103,6 +107,9 @@ export function ScriptSection({ section, newHighlightIds, presenterMode, present
           >
             <ImagePlus className="h-3.5 w-3.5" />
           </button>
+          {!isMobile && canComment && projectId && (
+            <StickyNotePopover sectionId={section.id} projectId={projectId} canComment={canComment} />
+          )}
         </div>
       </div>
     );
@@ -113,6 +120,13 @@ export function ScriptSection({ section, newHighlightIds, presenterMode, present
       {/* Margin coverage indicators — hidden in presenter mode */}
       {!presenterMode && highlights.length > 0 && (
         <MarginGutter highlights={highlights} sectionBody={section.body} />
+      )}
+
+      {/* Sticky note icon — right margin, desktop only */}
+      {!presenterMode && !isMobile && canComment && projectId && (
+        <div className="absolute -right-8 top-1 z-10">
+          <StickyNotePopover sectionId={section.id} projectId={projectId} canComment={canComment} />
+        </div>
       )}
 
       <p

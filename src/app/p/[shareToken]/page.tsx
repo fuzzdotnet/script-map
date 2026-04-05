@@ -5,6 +5,7 @@ import { getStickyNotesForProject } from "@/actions/notes";
 import { listMembers } from "@/actions/members";
 import { getProfiles } from "@/actions/profiles";
 import { getAuthUser } from "@/lib/supabase/auth";
+import { createServerClient } from "@/lib/supabase/server";
 import { ScriptViewer } from "@/components/script/ScriptViewer";
 import { TopBar } from "@/components/layout/TopBar";
 import type { ProjectRole } from "@/actions/projects";
@@ -39,7 +40,16 @@ export default async function ProjectPage({
   let isMember = false;
 
   if (user) {
-    if (project.owner_id && user.id === project.owner_id) {
+    // Check admin status
+    const supabase = createServerClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+    const userIsAdmin = profile?.is_admin === true;
+
+    if (userIsAdmin || (project.owner_id && user.id === project.owner_id)) {
       role = "owner";
       isMember = true;
     } else {

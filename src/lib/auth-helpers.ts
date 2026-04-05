@@ -1,9 +1,22 @@
 import { requireAuth } from "@/lib/supabase/auth";
 import { createServerClient } from "@/lib/supabase/server";
 
+/** Check if the current user is an admin. */
+async function isAdmin(userId: string): Promise<boolean> {
+  const supabase = createServerClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .single();
+  return profile?.is_admin === true;
+}
+
 /** Verify the current user owns a project. Throws if not authorized. */
 export async function requireProjectOwner(projectId: string) {
   const user = await requireAuth();
+  if (await isAdmin(user.id)) return user;
+
   const supabase = createServerClient();
 
   const { data: project } = await supabase
@@ -22,6 +35,8 @@ export async function requireProjectOwner(projectId: string) {
 /** Verify the current user is any member (viewer, editor, or owner). */
 export async function requireProjectMember(projectId: string) {
   const user = await requireAuth();
+  if (await isAdmin(user.id)) return user;
+
   const supabase = createServerClient();
 
   const { data: project } = await supabase
@@ -51,6 +66,8 @@ export async function requireProjectMember(projectId: string) {
 /** Verify the current user is the owner or an editor on a project. */
 export async function requireProjectEditor(projectId: string) {
   const user = await requireAuth();
+  if (await isAdmin(user.id)) return user;
+
   const supabase = createServerClient();
 
   // Check ownership first

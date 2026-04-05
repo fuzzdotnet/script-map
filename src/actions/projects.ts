@@ -148,6 +148,25 @@ export async function listProjects(): Promise<ProjectWithRole[]> {
   const supabase = createServerClient();
   const email = user.email?.toLowerCase();
 
+  // Check admin status
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.is_admin) {
+    const { data: all, error } = await supabase
+      .from("projects")
+      .select()
+      .order("updated_at", { ascending: false });
+    if (error) throw new Error(`Failed to list projects: ${error.message}`);
+    return (all || []).map((p) => ({
+      ...p,
+      role: (p.owner_id === user.id ? "owner" : "editor") as ProjectRole,
+    }));
+  }
+
   // 1. Owned projects
   const { data: owned, error: ownedError } = await supabase
     .from("projects")

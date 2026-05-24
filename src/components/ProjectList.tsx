@@ -13,6 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -64,7 +70,7 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
   }
 
   return (
-    <>
+    <TooltipProvider delayDuration={300}>
       <div className="space-y-1">
         {projects.map((project) => {
           const isOwner = project.role === "owner";
@@ -119,7 +125,30 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
                 </div>
               </Link>
 
-              <div className="pr-2">
+              <div className="flex items-center pr-2">
+                {isOwner && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleArchive(project)}
+                        disabled={isPending}
+                        aria-label={project.archived_at ? "Unarchive project" : "Archive project"}
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                      >
+                        {project.archived_at ? (
+                          <ArchiveRestore className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {project.archived_at ? "Unarchive" : "Archive"}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -149,24 +178,6 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
                       <Link2 className="h-4 w-4 mr-2" />
                       Copy link
                     </DropdownMenuItem>
-                    {isOwner && (
-                      <DropdownMenuItem
-                        onClick={() => handleArchive(project)}
-                        disabled={isPending}
-                      >
-                        {project.archived_at ? (
-                          <>
-                            <ArchiveRestore className="h-4 w-4 mr-2" />
-                            Unarchive
-                          </>
-                        ) : (
-                          <>
-                            <Archive className="h-4 w-4 mr-2" />
-                            Archive
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                    )}
                     {isOwner && (
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
@@ -208,7 +219,7 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </TooltipProvider>
   );
 }
 

@@ -143,10 +143,13 @@ export async function getProjectPageData(projectId: string): Promise<{
   return { sections, highlights, highlightMedia, sectionMedia, comments };
 }
 
-export async function listProjects(): Promise<ProjectWithRole[]> {
+export async function listProjects(
+  options: { archived?: boolean } = {}
+): Promise<ProjectWithRole[]> {
   const user = await requireAuth();
   const supabase = createServerClient();
   const email = user.email?.toLowerCase();
+  const archived = options.archived === true;
 
   // Check admin status
   const { data: profile } = await supabase
@@ -156,10 +159,11 @@ export async function listProjects(): Promise<ProjectWithRole[]> {
     .single();
 
   if (profile?.is_admin) {
-    const { data: all, error } = await supabase
-      .from("projects")
-      .select()
-      .order("updated_at", { ascending: false });
+    let query = supabase.from("projects").select();
+    query = archived
+      ? query.not("archived_at", "is", null)
+      : query.is("archived_at", null);
+    const { data: all, error } = await query.order("updated_at", { ascending: false });
     if (error) throw new Error(`Failed to list projects: ${error.message}`);
     return (all || []).map((p) => ({
       ...p,
@@ -168,10 +172,11 @@ export async function listProjects(): Promise<ProjectWithRole[]> {
   }
 
   // 1. Owned projects
-  const { data: owned, error: ownedError } = await supabase
-    .from("projects")
-    .select()
-    .eq("owner_id", user.id)
+  let ownedQuery = supabase.from("projects").select().eq("owner_id", user.id);
+  ownedQuery = archived
+    ? ownedQuery.not("archived_at", "is", null)
+    : ownedQuery.is("archived_at", null);
+  const { data: owned, error: ownedError } = await ownedQuery
     .order("updated_at", { ascending: false })
     .limit(20);
 
@@ -197,11 +202,11 @@ export async function listProjects(): Promise<ProjectWithRole[]> {
   if (sharedMemberships.length === 0) return ownedWithRole;
 
   const sharedIds = sharedMemberships.map((m) => m.project_id);
-  const { data: sharedProjects } = await supabase
-    .from("projects")
-    .select()
-    .in("id", sharedIds)
-    .order("updated_at", { ascending: false });
+  let sharedQuery = supabase.from("projects").select().in("id", sharedIds);
+  sharedQuery = archived
+    ? sharedQuery.not("archived_at", "is", null)
+    : sharedQuery.is("archived_at", null);
+  const { data: sharedProjects } = await sharedQuery.order("updated_at", { ascending: false });
 
   if (!sharedProjects) return ownedWithRole;
 
@@ -215,6 +220,76 @@ export async function listProjects(): Promise<ProjectWithRole[]> {
   return [...ownedWithRole, ...sharedWithRole].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
   );
+}
+
+export async function countArchivedProjects(): Promise<number> {
+  const user = await requireAuth();
+  const supabase = createServerClient();
+  const email = user.email?.toLowerCase();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.is_admin) {
+    const { count } = await supabase
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .not("archived_at", "is", null);
+    return count ?? 0;
+  }
+
+  const accessibleIds = new Set<string>();
+
+  const { data: owned } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("owner_id", user.id)
+    .not("archived_at", "is", null);
+  for (const p of owned || []) accessibleIds.add(p.id);
+
+  const { data: memberships } = await supabase
+    .from("project_members")
+    .select("project_id")
+    .or(`user_id.eq.${user.id}${email ? `,invited_email.eq.${email}` : ""}`);
+
+  const memberIds = (memberships || []).map((m) => m.project_id);
+  if (memberIds.length > 0) {
+    const { data: sharedArchived } = await supabase
+      .from("projects")
+      .select("id")
+      .in("id", memberIds)
+      .not("archived_at", "is", null);
+    for (const p of sharedArchived || []) accessibleIds.add(p.id);
+  }
+
+  return accessibleIds.size;
+}
+
+export async function archiveProject(projectId: string) {
+  await requireProjectOwner(projectId);
+  const supabase = createServerClient();
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", projectId);
+
+  if (error) throw new Error(`Failed to archive project: ${error.message}`);
+}
+
+export async function unarchiveProject(projectId: string) {
+  await requireProjectOwner(projectId);
+  const supabase = createServerClient();
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ archived_at: null })
+    .eq("id", projectId);
+
+  if (error) throw new Error(`Failed to unarchive project: ${error.message}`);
 }
 
 export async function deleteProject(projectId: string) {

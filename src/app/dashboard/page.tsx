@@ -3,25 +3,38 @@ import { Plus, Settings, Shield } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ProjectList } from "@/components/ProjectList";
 import { SignOutButton } from "@/components/SignOutButton";
-import { listProjects, getProjectStats } from "@/actions/projects";
+import {
+  listProjects,
+  getProjectStats,
+  countArchivedProjects,
+} from "@/actions/projects";
 import { claimPendingInvites } from "@/actions/members";
 import { getProfile } from "@/actions/profiles";
 import { getAuthUser } from "@/lib/supabase/auth";
-import type { ProjectRole } from "@/actions/projects";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ view?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await getAuthUser();
   if (!user) redirect("/login");
 
-  // Run profile fetch, invite claim, and project list in parallel
-  const [profile, , projects] = await Promise.all([
+  const { view } = await searchParams;
+  const showArchived = view === "archived";
+
+  // Run profile fetch, invite claim, project list, and archived count in parallel
+  const [profile, , projects, archivedCount] = await Promise.all([
     getProfile(user.id),
     user.email
       ? claimPendingInvites(user.id, user.email).catch(() => {})
       : Promise.resolve(),
-    listProjects().catch(() => [] as Awaited<ReturnType<typeof listProjects>>),
+    listProjects({ archived: showArchived }).catch(
+      () => [] as Awaited<ReturnType<typeof listProjects>>
+    ),
+    countArchivedProjects().catch(() => 0),
   ]);
 
   // Single batch query for all project stats (2 queries instead of 2×N)
@@ -34,6 +47,11 @@ export default async function DashboardPage() {
     sectionCount: stats[p.id]?.sectionCount ?? 0,
     highlightCount: stats[p.id]?.highlightCount ?? 0,
   }));
+
+  const tabBase =
+    "px-3 py-1.5 text-sm rounded-full transition-colors";
+  const tabActive = "bg-purple-500/15 text-purple-200";
+  const tabInactive = "text-muted-foreground hover:text-foreground";
 
   return (
     <div className="flex min-h-screen flex-col items-center px-6">
@@ -51,14 +69,33 @@ export default async function DashboardPage() {
       </header>
 
       <section className="w-full max-w-2xl flex-1 pb-24">
+        <div className="flex items-center gap-1 mb-4">
+          <Link
+            href="/dashboard"
+            className={`${tabBase} ${!showArchived ? tabActive : tabInactive}`}
+          >
+            Active
+          </Link>
+          <Link
+            href="/dashboard?view=archived"
+            className={`${tabBase} ${showArchived ? tabActive : tabInactive}`}
+          >
+            Archived{archivedCount > 0 ? ` (${archivedCount})` : ""}
+          </Link>
+        </div>
+
         {projectsWithStats.length > 0 ? (
           <ProjectList projects={projectsWithStats} />
         ) : (
           <div className="py-24 text-center">
-            <p className="text-lg text-muted-foreground">No projects yet.</p>
-            <p className="mt-2 text-sm text-purple-300/40">
-              Create your first project to get started.
+            <p className="text-lg text-muted-foreground">
+              {showArchived ? "No archived projects." : "No projects yet."}
             </p>
+            {!showArchived && (
+              <p className="mt-2 text-sm text-purple-300/40">
+                Create your first project to get started.
+              </p>
+            )}
           </div>
         )}
       </section>

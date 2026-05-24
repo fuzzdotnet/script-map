@@ -12,6 +12,7 @@ CREATE TABLE projects (
   title TEXT NOT NULL DEFAULT 'Untitled Script',
   share_token TEXT UNIQUE NOT NULL,
   settings JSONB NOT NULL DEFAULT '{}',
+  archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

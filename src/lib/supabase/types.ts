@@ -13,6 +13,7 @@ export interface Project {
   share_token: string;
   owner_id: string | null;
   settings?: ProjectSettings;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 }

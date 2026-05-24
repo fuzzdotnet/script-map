@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2, FileText, Layers, MoreHorizontal, Pencil, Link2 } from "lucide-react";
+import { Trash2, FileText, Layers, MoreHorizontal, Pencil, Link2, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { deleteProject } from "@/actions/projects";
+import { deleteProject, archiveProject, unarchiveProject } from "@/actions/projects";
 import type { Project } from "@/lib/supabase/types";
 import type { ProjectRole } from "@/actions/projects";
 
@@ -44,6 +44,21 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
         router.refresh();
       } catch (err) {
         console.error("Failed to delete:", err);
+      }
+    });
+  }
+
+  function handleArchive(project: ProjectWithStats) {
+    startTransition(async () => {
+      try {
+        if (project.archived_at) {
+          await unarchiveProject(project.id);
+        } else {
+          await archiveProject(project.id);
+        }
+        router.refresh();
+      } catch (err) {
+        console.error("Failed to toggle archive:", err);
       }
     });
   }
@@ -134,6 +149,24 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
                       <Link2 className="h-4 w-4 mr-2" />
                       Copy link
                     </DropdownMenuItem>
+                    {isOwner && (
+                      <DropdownMenuItem
+                        onClick={() => handleArchive(project)}
+                        disabled={isPending}
+                      >
+                        {project.archived_at ? (
+                          <>
+                            <ArchiveRestore className="h-4 w-4 mr-2" />
+                            Unarchive
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-4 w-4 mr-2" />
+                            Archive
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    )}
                     {isOwner && (
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"

@@ -126,7 +126,7 @@ export function ProjectList({ projects }: { projects: ProjectWithStats[] }) {
               </Link>
 
               <div className="flex items-center pr-2">
-                {isOwner && (
+                {canEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button

@@ -269,7 +269,7 @@ export async function countArchivedProjects(): Promise<number> {
 }
 
 export async function archiveProject(projectId: string) {
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
   const supabase = createServerClient();
 
   const { error } = await supabase
@@ -281,7 +281,7 @@ export async function archiveProject(projectId: string) {
 }
 
 export async function unarchiveProject(projectId: string) {
-  await requireProjectOwner(projectId);
+  await requireProjectEditor(projectId);
   const supabase = createServerClient();
 
   const { error } = await supabase

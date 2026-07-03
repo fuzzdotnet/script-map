@@ -5,7 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import { requireProjectOwner, requireProjectEditor } from "@/lib/auth-helpers";
 import { parseScriptText } from "@/lib/sectionParser";
-import { remapHighlights } from "@/lib/highlightRemapper";
+import { remapHighlights, remapSections } from "@/lib/highlightRemapper";
 import { createSnapshot } from "@/actions/versions";
 import type {
   Project,
@@ -411,6 +411,16 @@ export async function replaceProjectScript(projectId: string, scriptText: string
       oldHighlights = hlData || [];
     }
 
+    // Fetch section-level notes (sticky notes) for old sections
+    let oldNotes: { id: string; section_id: string }[] = [];
+    if (oldSectionIds.length > 0) {
+      const { data: noteData } = await supabase
+        .from("notes")
+        .select("id, section_id")
+        .in("section_id", oldSectionIds);
+      oldNotes = (noteData || []) as { id: string; section_id: string }[];
+    }
+
     // Insert new sections alongside old ones
     let insertedSectionIds: string[] = [];
     if (parsedSections.length > 0) {
@@ -453,6 +463,30 @@ export async function replaceProjectScript(projectId: string, scriptText: string
             })
             .eq("id", r.highlightId)
         )
+      );
+    }
+
+    // Re-point sticky notes at the new sections so they survive the
+    // cascade delete of old sections
+    if (oldNotes.length > 0 && insertedSectionIds.length > 0) {
+      const sectionMap = new Map(
+        remapSections(oldSectionList, scriptText, parsedSections).map((r) => [
+          r.oldSectionId,
+          r.newSectionIndex,
+        ])
+      );
+
+      await Promise.all(
+        oldNotes
+          .filter((n) => sectionMap.has(n.section_id))
+          .map((n) =>
+            supabase
+              .from("notes")
+              .update({
+                section_id: insertedSectionIds[sectionMap.get(n.section_id)!],
+              })
+              .eq("id", n.id)
+          )
       );
     }
 

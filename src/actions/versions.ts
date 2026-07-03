@@ -2,7 +2,9 @@
 
 import { createServerClient } from "@/lib/supabase/server";
 import { requireProjectEditor, requireProjectMember } from "@/lib/auth-helpers";
-import type { VersionSnapshot, ScriptVersion } from "@/lib/supabase/types";
+import { remapSections } from "@/lib/highlightRemapper";
+import type { ParsedSection } from "@/lib/sectionParser";
+import type { Section, VersionSnapshot, ScriptVersion } from "@/lib/supabase/types";
 
 const MAX_VERSIONS_PER_PROJECT = 50;
 
@@ -156,18 +158,40 @@ export async function revertToVersion(
     user.id
   );
 
-  // Delete all current sections (CASCADE handles highlights etc.)
-  const { error: deleteError } = await supabase
+  // Fetch current sections and their sticky notes so the notes can be
+  // carried over to the restored sections (notes aren't versioned — they
+  // live outside the script's history and should survive reverts)
+  const { data: oldSectionData } = await supabase
     .from("sections")
-    .delete()
-    .eq("project_id", projectId);
+    .select()
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true });
 
-  if (deleteError) {
-    throw new Error(`Failed to clear sections: ${deleteError.message}`);
+  const oldSections: Section[] = oldSectionData || [];
+  const oldSectionIds = oldSections.map((s) => s.id);
+
+  let oldNotes: { id: string; section_id: string }[] = [];
+  if (oldSectionIds.length > 0) {
+    const { data: noteData } = await supabase
+      .from("notes")
+      .select("id, section_id")
+      .in("section_id", oldSectionIds);
+    oldNotes = (noteData || []) as { id: string; section_id: string }[];
   }
 
-  // Restore sections from snapshot
-  if (snapshot.sections.length === 0) return;
+  // Restore sections from snapshot — insert alongside the old ones so
+  // notes can be re-pointed before the old sections are deleted
+  if (snapshot.sections.length === 0) {
+    const { error: deleteError } = await supabase
+      .from("sections")
+      .delete()
+      .eq("project_id", projectId);
+
+    if (deleteError) {
+      throw new Error(`Failed to clear sections: ${deleteError.message}`);
+    }
+    return;
+  }
 
   const sectionRows = snapshot.sections.map((s, index) => ({
     project_id: projectId,
@@ -212,6 +236,59 @@ export async function revertToVersion(
       if (hlError) {
         throw new Error(`Failed to restore highlights: ${hlError.message}`);
       }
+    }
+  }
+
+  // Re-point sticky notes at the restored sections so they survive the
+  // cascade delete of the old ones
+  if (oldNotes.length > 0 && insertedSections && insertedSections.length > 0) {
+    // Build ParsedSection-shaped entries for the restored script so the
+    // section remapper can diff old text against restored text
+    let offset = 0;
+    const restoredParsed: ParsedSection[] = snapshot.sections.map((s, i) => {
+      const parsed = {
+        title: s.title,
+        body: s.body,
+        section_type: s.section_type,
+        sourceOffset: offset,
+      };
+      offset += s.body.length;
+      if (i < snapshot.sections.length - 1) offset += 2; // "\n\n" separator
+      return parsed;
+    });
+    const restoredFullText = snapshot.sections.map((s) => s.body).join("\n\n");
+
+    const sectionMap = new Map(
+      remapSections(oldSections, restoredFullText, restoredParsed).map((r) => [
+        r.oldSectionId,
+        r.newSectionIndex,
+      ])
+    );
+
+    await Promise.all(
+      oldNotes
+        .filter((n) => sectionMap.has(n.section_id))
+        .map((n) =>
+          supabase
+            .from("notes")
+            .update({
+              section_id: insertedSections[sectionMap.get(n.section_id)!].id,
+            })
+            .eq("id", n.id)
+        )
+    );
+  }
+
+  // Delete the old sections (cascade cleans up old highlights and any
+  // notes that couldn't be remapped)
+  if (oldSectionIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("sections")
+      .delete()
+      .in("id", oldSectionIds);
+
+    if (deleteError) {
+      throw new Error(`Failed to clear sections: ${deleteError.message}`);
     }
   }
 

@@ -129,6 +129,62 @@ function findSectionForOffset(
   return -1;
 }
 
+export interface RemappedSection {
+  oldSectionId: string;
+  newSectionIndex: number;
+}
+
+/**
+ * Map each old section to the new section its text most overlaps with,
+ * using the same character-level diff as highlight remapping.
+ *
+ * Used to carry section-level attachments (sticky notes) across a script
+ * edit. Sections whose text was entirely deleted are omitted.
+ */
+export function remapSections(
+  oldSections: Section[],
+  newFullText: string,
+  newParsedSections: ParsedSection[]
+): RemappedSection[] {
+  if (oldSections.length === 0 || newParsedSections.length === 0) return [];
+
+  const { text: oldFullText, boundaries } = buildFullText(oldSections);
+
+  const dmp = new DiffMatchPatch();
+  const diffs = dmp.diff_main(oldFullText, newFullText);
+  dmp.diff_cleanupEfficiency(diffs);
+
+  const newBounds = newSectionBoundaries(newParsedSections);
+
+  const result: RemappedSection[] = [];
+
+  for (const b of boundaries) {
+    const newStart = remapOffset(diffs, b.start, "start");
+    const newEnd = remapOffset(diffs, b.end, "end");
+
+    // Section text was entirely deleted
+    if (newStart >= newEnd) continue;
+
+    // Pick the new section with the largest overlap
+    let bestIdx = -1;
+    let bestOverlap = 0;
+    for (let i = 0; i < newBounds.length; i++) {
+      const overlap =
+        Math.min(newEnd, newBounds[i].end) -
+        Math.max(newStart, newBounds[i].start);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === -1) continue;
+
+    result.push({ oldSectionId: b.sectionId, newSectionIndex: bestIdx });
+  }
+
+  return result;
+}
+
 /**
  * Remap all highlights from old sections to new sections using a character-level diff.
  *

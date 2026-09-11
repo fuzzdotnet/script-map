@@ -8,7 +8,8 @@ export async function middleware(request: NextRequest) {
   const code = searchParams.get("code");
 
   // Fast path: skip auth for public routes when there's no auth code to exchange
-  const isPublic = pathname === "/" || pathname.startsWith("/p/");
+  const isPublic =
+    pathname === "/" || pathname.startsWith("/p/") || pathname.startsWith("/api/");
   if (isPublic && !code) {
     return NextResponse.next({ request });
   }

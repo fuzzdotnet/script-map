@@ -282,10 +282,10 @@
    PRESENTER MODE
    ============================================= */
 
-.presenter-mirror {
-  transform: scaleY(-1);
+.prompter-scroll {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
-
-.presenter-text {
-  letter-spacing: 0.02em;
+.prompter-scroll::-webkit-scrollbar {
+  display: none;
 }

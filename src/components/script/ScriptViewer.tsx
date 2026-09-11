@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ScriptSection } from "./ScriptSection";
+import { PrompterView } from "./PrompterView";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { CoverageLegend } from "./CoverageLegend";
 import { MobileBanner } from "./MobileBanner";
@@ -11,14 +12,6 @@ import { MediaSidebar } from "@/components/layout/MediaSidebar";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { useAnnotationStore } from "@/hooks/useAnnotationStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { FlipVertical2, Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { createHighlight, createHighlights } from "@/actions/highlights";
 import { toLineColor } from "@/lib/annotationEngine";
 import type {
@@ -85,12 +78,6 @@ export function ScriptViewer({
   const selectSectionForMedia = useAnnotationStore((s) => s.selectSectionForMedia);
   const openSidebar = useAnnotationStore((s) => s.openSidebar);
   const presenterMode = useAnnotationStore((s) => s.presenterMode);
-  const mirrorText = useAnnotationStore((s) => s.mirrorText);
-  const toggleMirrorText = useAnnotationStore((s) => s.toggleMirrorText);
-  const presenterFontSize = useAnnotationStore((s) => s.presenterFontSize);
-  const increasePresenterFont = useAnnotationStore((s) => s.increasePresenterFont);
-  const decreasePresenterFont = useAnnotationStore((s) => s.decreasePresenterFont);
-  const allHighlights = useAnnotationStore((s) => s.highlights);
 
   // Hydrate store with server data
   useEffect(() => {
@@ -158,21 +145,6 @@ export function ScriptViewer({
     };
   }, [settings]);
 
-  // In presenter mode, only show sections that have on_camera highlights
-  const visibleSections = useMemo(() => {
-    if (!presenterMode) return sections;
-    return sections.filter((section) => {
-      const isHeading =
-        section.section_type === "act" ||
-        section.section_type === "scene" ||
-        section.section_type === "heading";
-      if (isHeading) return false;
-      return allHighlights.some(
-        (h) => h.section_id === section.id && h.label === "on_camera"
-      );
-    });
-  }, [presenterMode, sections, allHighlights]);
-
   function handleCoverage(label: string, color: string, openToTab?: "upload" | "reference") {
     if (!selection) return;
 
@@ -215,81 +187,24 @@ export function ScriptViewer({
     <div className="flex flex-1 overflow-hidden">
       {/* Script panel */}
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className={`mx-auto max-w-3xl px-4 py-8 md:px-8 md:py-12 ${mirrorText ? "presenter-mirror" : ""}`}>
-          {visibleSections.length === 0 ? (
+        <div className="mx-auto max-w-3xl px-4 py-8 md:px-8 md:py-12">
+          {sections.length === 0 ? (
             <div className="py-24 text-center text-muted-foreground">
-              {presenterMode ? (
-                <>
-                  <p className="text-lg">No on-camera text found.</p>
-                  <p className="mt-2 text-sm">
-                    Mark text as &quot;On Camera&quot; in edit mode to see it here.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-lg">No sections found.</p>
-                  <p className="mt-2 text-sm">This script appears to be empty.</p>
-                </>
-              )}
+              <p className="text-lg">No sections found.</p>
+              <p className="mt-2 text-sm">This script appears to be empty.</p>
             </div>
           ) : (
             <div className="script-sections space-y-6">
-              {visibleSections.map((section) => (
-                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} presenterMode={presenterMode} presenterFontSize={presenterFontSize} isMobile={isMobile} projectId={projectId} canComment={canComment} />
+              {sections.map((section) => (
+                <ScriptSection key={section.id} section={section} newHighlightIds={newHighlightIds} isMobile={isMobile} projectId={projectId} canComment={canComment} />
               ))}
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Presenter controls — only visible in presenter mode */}
-      {presenterMode && (
-        <TooltipProvider>
-          <div className="fixed bottom-4 right-4 z-40 flex flex-col gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={increasePresenterFont}
-                  className="h-10 w-10 rounded-full shadow-lg border-white/15"
-                >
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Increase Size</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={decreasePresenterFont}
-                  className="h-10 w-10 rounded-full shadow-lg border-white/15"
-                >
-                  <Minus className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">Decrease Size</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={mirrorText ? "default" : "outline"}
-                  size="icon"
-                  onClick={toggleMirrorText}
-                  className="h-10 w-10 rounded-full shadow-lg border-white/15"
-                >
-                  <FlipVertical2 className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                {mirrorText ? "Disable Mirror" : "Mirror Text"}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
-      )}
+      {/* Teleprompter overlay */}
+      {presenterMode && <PrompterView sections={sections} />}
 
       {/* Desktop editing UI — hidden in presenter mode */}
       {!presenterMode && !isMobile && (
